@@ -6,6 +6,9 @@ No inventar población en caso de error de consulta o cobertura insuficiente.
 """
 from __future__ import annotations
 from functools import lru_cache
+import gzip
+import json
+from pathlib import Path
 from math import cos, radians
 import requests
 from pyproj import Transformer
@@ -76,11 +79,31 @@ def query_caba_polygons(lat,lon,request_get=None):
     return collected
 
 
+@lru_cache(maxsize=1)
+def _local_caba_polygons():
+    """Use a dated, verified local census snapshot whenever available."""
+    path=Path(__file__).resolve().parent/'data'/'censo_caba_2022.geojson.gz'
+    if not path.is_file():return None
+    try:
+        with gzip.open(path,'rt',encoding='utf-8') as f:geojson=json.load(f)
+        parsed=[]
+        for feature in geojson.get('features',[]):
+            pop=float((feature.get('properties') or {}).get('pop'))
+            geom=transform(PROJ,shape(feature['geometry']))
+            if 0<=pop<=40000 and not geom.is_empty and geom.area>0:
+                parsed.append((geom,pop))
+        if len(parsed)<800:return None
+        return parsed
+    except (OSError,ValueError,TypeError,KeyError,EOFError):return None
+
+
 @lru_cache(maxsize=128)
 def population_caba_at(lat,lon,radii=(400,800,1200)):
-    """Area-weighted residential pop; cannot assert quality with missing coverage."""
+    """Area-weighted residential estimate, prefer local snapshot; do not guess."""
     if not _in_caba_extent(lat,lon):return None
-    polys=query_caba_polygons(lat,lon)
+    polys=_local_caba_polygons()
+    if polys is None:
+        polys=query_caba_polygons(lat,lon)
     if not polys:return None
     point=transform(PROJ,Point(lon,lat))
     if not any(geom.covers(point) for geom,pop in polys):return None
@@ -91,6 +114,7 @@ def population_caba_at(lat,lon,radii=(400,800,1200)):
         total=0.; covered=0.
         for geom,pop in polys:
             try:
+                if not geom.intersects(circle):continue
                 intersection=geom.intersection(circle)
                 if intersection.is_empty:continue
                 area=intersection.area
@@ -102,5 +126,5 @@ def population_caba_at(lat,lon,radii=(400,800,1200)):
         totals[r]=round(total)
         if r==800:totals['coverage_800']=round(coverage*100)
     totals['density_800']=round(totals[800]/(pi*.8**2))
-    totals['fuente']='Censo 2022 · radios de CABA (consulta cartográfica)'
+    totals['fuente']='Censo 2022 · radios de CABA ('+('extracto local' if _local_caba_polygons() else 'consulta externa')+')'
     return totals

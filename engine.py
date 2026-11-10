@@ -209,8 +209,8 @@ def compute_result(lat, lon, osm=None, branches=None, own_brand='', network_qual
     network_coverage = len(valid_rows) / len(branches) if branches else 0.0
     if network_quality is not None:
         network_coverage = min(network_coverage, float(network_quality))
-    if network_coverage < .80:
-        issues.append('network')
+    # Las sucursales que no tienen coordenadas NO invalidan el score comercial.
+    # Solo se utilizan las coordenadas verificadas como evidencia de cercanía.
     nearby = own_network_summary(lat, lon, valid_rows)
 
     raw = {}

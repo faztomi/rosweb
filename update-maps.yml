@@ -1,0 +1,62 @@
+name: Preparar datos cartograficos ROS
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/update-maps.yml'
+      - 'scripts/build_osm_snapshot.py'
+  schedule:
+    - cron: '30 7 1 * *'
+permissions:
+  contents: write
+concurrency:
+  group: mapas-ros
+  cancel-in-progress: false
+jobs:
+  build-maps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar extractor
+        run: python -m pip install 'osmium>=4,<5' 'requests>=2.31,<3' 'shapely>=2,<3'
+      - name: Descargar y procesar OpenStreetMap Argentina
+        run: python scripts/build_osm_snapshot.py
+      - name: Preparar Censo 2022 CABA
+        continue-on-error: true
+        run: python scripts/build_caba_snapshot.py
+      - name: Verificar integridad de ambas bases
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from osm_snapshot import database_path,snapshot_metadata,local_osm
+          assert database_path() is not None, 'Snapshot OSM inválido'
+          meta=snapshot_metadata()
+          print('OSM:',meta['features'],'elementos')
+          assert int(meta['features'])>40000
+          for (lat,lon) in [(-34.60,-58.40),(-34.77,-58.40),(-34.92,-57.95)]:
+              items,source=local_osm(lat,lon)
+              assert items is not None and len(items)>=10, (lat,lon,source,len(items or []))
+              print('Zona',lat,lon,':',len(items),'elementos OSM')
+          if Path('data/censo_caba_2022.geojson.gz').exists():
+              assert Path('data/censo_caba_2022.geojson.gz').stat().st_size>100000
+              print('CABA offline: disponible')
+          else:
+              print('AVISO: CABA offline pendiente; las consultas CABA usan API externa')
+          PY
+      - name: Publicar bases en GitHub
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A data/
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publicar datos geográficos OSM y CABA verificados'
+            git push origin HEAD:main
+          fi

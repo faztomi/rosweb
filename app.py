@@ -13,7 +13,8 @@ import pandas as pd
 import streamlit as st
 
 from engine import WEIGHTS, compute_result, norm, population_at
-from services import geocode, geocode_network_georef, overpass_pois, read_network, valid_latlon
+from services import geocode, read_network, valid_latlon
+from osm_snapshot import local_osm, snapshot_metadata
 
 log = logging.getLogger('rosweb')
 # En modo público no se guarda el texto de direcciones ingresadas por visitantes.
@@ -68,6 +69,14 @@ def _brand(df:pd.DataFrame, filename:str) -> str:
         s=df['Cadena'].astype(str).str.strip().replace('', pd.NA).dropna()
         if not s.empty:
             return str(s.mode()[0])
+    # Infer only unambiguous known brands from filename; never require it for score.
+    normalized = norm(filename)
+    known = {'carrefour':'Carrefour','dia':'DIA','coto':'Coto',
+             'jumbo':'Jumbo','disco':'Disco','changomas':'ChangoMás',
+             'vea':'Vea','la anonima':'La Anónima'}
+    for token,value in known.items():
+        if token in normalized.split() or (' ' in token and token in normalized):
+            return value
     return ''
 
 
@@ -104,6 +113,7 @@ def _render_result(out:dict, location:str, network:pd.DataFrame, source:str) -> 
         st.write('Transporte registrado:',osm.get('transporte','—'))
         st.write('Servicios registrados:',osm.get('servicios','—'))
         st.write('Sucursales de la red incorporada:',len(network))
+        st.write('Sucursales con coordenadas verificables:',out.get('red',{}).get('total_verificadas',0))
         st.caption('La población se distribuye proporcionalmente entre radios censales; no representa afluencia peatonal real. '
                    'Los elementos de OSM pueden estar incompletos. Las ponderaciones iniciales son heurísticas y aún no están calibradas contra ventas fuera de muestra. '
                    'El índice no evalúa el estado físico del inmueble, su precio, el contrato ni la normativa de apertura. '
@@ -152,9 +162,9 @@ if submitted:
             st.stop()
         with st.spinner('Contrastando comercios, transporte y red de sucursales…'):
             try:
-                if not all(valid_latlon(r.get('Latitud'),r.get('Longitud')) for _,r in network.iterrows()):
-                    network,_=geocode_network_georef(network)
-                elements,source=overpass_pois(point['lat'],point['lon'])
+                # The cartographic snapshot is verified separately before deployment.
+                # A visitor never invokes Overpass or bulk geocodes 100+ branches.
+                elements,source=local_osm(point['lat'],point['lon'])
                 outcome=compute_result(point['lat'],point['lon'],osm=elements,
                                        branches=network.to_dict('records'),
                                        own_brand=_brand(network,upload.name))
@@ -168,5 +178,18 @@ if submitted:
             _render_result(outcome,address.strip(),network,source)
 
 st.divider()
-st.caption('Índice exploratorio de atractivo territorial. No predice facturación ni reemplaza una evaluación comercial profesional. '
+st.caption('© OpenStreetMap contributors (ODbL). Índice exploratorio de atractivo territorial. No predice facturación ni reemplaza una evaluación comercial profesional. '
            'Cada persona utiliza su propia red durante la sesión.')
+
+# Soporte técnico optativo, no visible en la interfaz pública habitual.
+if st.query_params.get('diagnostico') == '1':
+    with st.expander('Estado técnico de las fuentes'):
+        meta = snapshot_metadata()
+        st.write('Base OSM:', 'disponible' if meta else 'no cargada')
+        if meta:
+            st.write('Fecha de corte:', meta.get('downloaded_at', '—'))
+            st.write('Elementos cartográficos:', meta.get('features', '—'))
+        from engine import CENSUS
+        st.write('Censo PBA:', 'disponible' if CENSUS.is_file() else 'no cargado')
+        from pathlib import Path
+        st.write('Censo CABA:', 'disponible' if (Path(__file__).parent/'data/censo_caba_2022.geojson.gz').is_file() else 'no cargado')
