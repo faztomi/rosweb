@@ -39,7 +39,15 @@ def geo_dist(lat1, lon1, lat2, lon2):
 @lru_cache(maxsize=1)
 def census_index():
     """Loads a verified 2022 PBA polygons+population snapshot, once per app process."""
-    with gzip.open(CENSUS,'rt',encoding='utf-8') as f: obj=json.load(f)
+    # A missing dataset must never crash the public web app.
+    # It remains an explicit missing dimension (no invented population).
+    if not CENSUS.is_file():
+        return None
+    try:
+        with gzip.open(CENSUS, 'rt', encoding='utf-8') as source:
+            obj = json.load(source)
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return None
     polygons=[]; pops=[]
     for f in obj['features']:
         p=f['properties'].get('pop')
@@ -57,7 +65,10 @@ def census_index():
 
 def population_at(lat,lon,radii=(400,800,1200)):
     if not (-43 <= lat <= -32 and -65 <= lon <= -55):return None
-    polygons, pops, tree=census_index()
+    index = census_index()
+    if index is None:
+        return None
+    polygons, pops, tree=index
     point=transform(PROJECT,Point(lon,lat))
     # If coordinate isn't within covered census polygons, return no data,
     # rather than presenting neighboring radios as locally accessible population.

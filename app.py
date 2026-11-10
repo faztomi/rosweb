@@ -109,6 +109,9 @@ if upload is not None:
         df,metadata=loaded()
     except Exception as ex:st.error(f'No pude leer la red: {ex}')
 
+if not (HERE / 'data' / 'censo_pba_2022.geojson.gz').is_file():
+    st.warning('Falta la base del Censo 2022 en el servidor. Para completar la demanda residencial, subí `data/censo_pba_2022.geojson.gz` a GitHub. Las otras dimensiones pueden evaluarse si responden las fuentes cartográficas.')
+
 st.subheader('2 · Dirección a evaluar')
 with st.form('eval',clear_on_submit=False):
     address=st.text_input('Dirección',placeholder='Julio Sánchez Gardel 28, Temperley, Buenos Aires',help='También admite coordenadas o un enlace de Google Maps con coordenadas visibles.')
