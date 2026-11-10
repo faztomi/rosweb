@@ -1,0 +1,10 @@
+__pycache__/
+.pytest_cache/
+*.pyc
+*.sqlite3
+*.db
+.streamlit/secrets.toml
+.env
+red_actual.csv
+red_meta.json
+.DS_Store

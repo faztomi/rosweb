@@ -1,0 +1,12 @@
+ROS SIMPLE WEB — INSTRUCCIONES CORTAS
+
+1. Creá una cuenta en https://github.com
+2. Creá un repositorio nuevo (público) y subí el CONTENIDO DESCOMPRIMIDO de este ZIP. No subas solo el ZIP.
+3. Entrá en https://share.streamlit.io con la cuenta de GitHub.
+4. Create app → elegí el repositorio → app.py → Deploy.
+5. Copiá el enlace que termina en .streamlit.app y compartilo.
+
+NOTA: La base censal incluida cubre la Provincia de Buenos Aires, no CABA.
+Los servicios públicos de mapas pueden fallar o demorar; el score puede ser parcial.
+Red DÍA de ejemplo: listado parcial, no actualizado ni georreferenciado en su totalidad.
+Los visitantes cargan una red por sesión; no hay almacenamiento permanente de sus archivos.
