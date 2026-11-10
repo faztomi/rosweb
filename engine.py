@@ -128,12 +128,16 @@ def poi_classify(items, own_brand='', own_locations=None):
         railway=tags.get('railway','')
         trans=tags.get('public_transport','')
         brand=norm(' '.join([tags.get('brand',''),tags.get('name',''),tags.get('operator','')]))
-        if typ in {'supermarket','convenience','bakery','butcher','greengrocer','chemist','clothes','shoes','variety_store','mall','kiosk','department_store','hardware','florist','beverages','books','electronics'}:
+        # Include the full set of documented retail shops and public-facing
+        # food premises. Restricting this to a short shop whitelist made dense
+        # retail streets falsely look almost empty.
+        if ((typ and typ not in {'no','vacant','closed','disused','yes'})
+            or amenity in {'restaurant','cafe','fast_food','bar','pub','food_court'}):
             commercial.append(obj)
-        if amenity in {'school','kindergarten','hospital','clinic','doctors','pharmacy','bank','atm','university','post_office','marketplace'}:
+        if amenity in {'school','kindergarten','hospital','clinic','doctors','dentist','pharmacy','bank','atm','university','college','post_office','marketplace','library','community_centre'}:
             amenities.append(obj)
         if highway=='bus_stop' or railway in {'station','halt','tram_stop'} or trans in {'platform','stop_position','station'}:transport.append(obj)
-        if highway in {'primary','secondary','tertiary','residential','pedestrian','footway'} and obj.get('type')=='way': roads.append(obj)
+        if highway in {'primary','secondary','tertiary','residential','pedestrian','footway','unclassified','living_street'} and obj.get('type')=='way': roads.append(obj)
         if typ=='supermarket':
             nearby_owned=False
             if obj.get('lat') is not None and obj.get('lon') is not None:
@@ -141,7 +145,9 @@ def poi_classify(items, own_brand='', own_locations=None):
                     nearby_owned=any(geo_dist(float(obj['lat']),float(obj['lon']), a,b) <= 45
                                      for a,b in own_locations)
                 except (TypeError,ValueError):pass
-            if nearby_owned or (own and own in brand):own_osm.append(obj)
+            same_brand=(own and (brand==own or brand.startswith(own+' ') or
+                        brand.endswith(' '+own) or (' '+own+' ') in brand))
+            if nearby_owned or same_brand:own_osm.append(obj)
             else:competitors.append(obj)
     return dict(commercial=commercial, amenities=amenities,transport=transport,roads=roads,competitors=competitors,own_osm=own_osm)
 
@@ -182,14 +188,14 @@ def own_network_summary(lat,lon,branches):
             'lista_cercanas':verified[:5]}
 
 
-def compute_result(lat, lon, osm=None, branches=None, own_brand='', network_quality=None):
+def compute_result(lat, lon, osm=None, branches=None, own_brand='', network_quality=None, population=None):
     """Return a publishable score ONLY when evidence for all 5 dimensions is adequate.
 
     Missing services, insufficient coverage, low-confidence geocoding, incomplete
     branch networks and cartographic samples NEVER become zero-valued features.
     In these circumstances score=None and no numeric result is shown publicly.
     """
-    pop = population_at(lat, lon)
+    pop = population if population is not None else population_at(lat, lon)
     scores = {k: None for k in WEIGHTS}
     issues = []
     if pop is None:

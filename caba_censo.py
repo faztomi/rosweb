@@ -97,7 +97,7 @@ def _local_caba_polygons():
     except (OSError,ValueError,TypeError,KeyError,EOFError):return None
 
 
-@lru_cache(maxsize=128)
+@lru_cache(maxsize=16)
 def population_caba_at(lat,lon,radii=(400,800,1200)):
     """Area-weighted residential estimate, prefer local snapshot; do not guess."""
     if not _in_caba_extent(lat,lon):return None

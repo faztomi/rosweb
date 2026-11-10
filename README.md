@@ -1,50 +1,50 @@
-# ROS WEB v4 — Base OSM propia (sin Overpass por evaluación)
+# ROS Web — versión 5 (dirección primero, red opcional)
 
-**Para el propietario de la página**. El visitante solo realiza dos pasos: subir su red en Excel/CSV y escribir una dirección. No necesita configurar APIs, Censo ni mapas.
+Evaluador de atractivo comercial con cinco dimensiones. No evalúa fachada, metros cuadrados ni características físicas del inmueble. **El score es un índice exploratorio, no una probabilidad de ventas ni un modelo estadísticamente validado.**
 
-## Qué cambia
+## Uso público
 
-1. **NO llama a Overpass al calcular el score**: utiliza una base OSM local creada por GitHub Actions desde el extracto completo de Argentina de Geofabrik (© OpenStreetMap contributors, ODbL). Una vez creada, la base se guarda comprimida en el repositorio, dividida en partes verificadas mediante SHA-256. Cada consulta de la web usa esa copia.
-2. La red del visitante sirve para distinguir tiendas propias de competidores, pero **no bloquea todo el análisis** si algunas sucursales no tienen coordenadas. La proximidad a sucursales sin coordenadas no puede estimarse.
-3. El Censo 2022 de PBA está incorporado. Hay un proceso adicional que intenta guardar **CABA 2022** localmente; si ese servicio externo falla, la app conserva su modo de consulta externa para CABA.
-4. **Nunca se publica un score incompleto**. Si la base aún no fue construida o falta información suficiente en la zona, se informa de forma breve al visitante sin asignar cero.
-5. El modelo es **heurístico y no validado contra ventas reales**. Los datos OSM reflejan registros aportados por colaboradores, no un censo de todos los comercios ni aforos peatonales.
+1. Escribí una dirección con calle, altura, localidad y provincia.
+2. Opcional: subí un Excel o CSV de sucursales de tu cadena.
+3. Presioná **Calcular score**.
 
-## Instalación en tu repositorio `rosweb` (misma dirección `rosweb.streamlit.app`)
+La red **NO es obligatoria**. Puede tener direcciones sin coordenadas: eso no impide evaluar la ubicación. Si contiene coordenadas comprobadas, estas ayudan a distinguir sucursales propias cercanas. Un CSV con nombres de cadenas también ayuda a no tratar la propia marca como competidora en OSM.
 
-1. Descargá y extraé el ZIP. En tu repositorio de GitHub `rosweb`, rama `main`, elegí **Add file > Upload files** y subí el contenido de la carpeta (no el ZIP). Confirmá los cambios. Verificá que `app.py`, `engine.py`, `osm_snapshot.py`, `requirements.txt`, la carpeta `data` y `.github/workflows/update-maps.yml` estén en sus rutas correctas. Si GitHub no sube directorios ocultos, agregá el archivo de workflow desde **Add file > Create new file**, usando como nombre `.github/workflows/update-maps.yml`, y copiá su contenido.
-2. Entrá a **GitHub > rosweb > Actions**. Buscá **Preparar datos cartograficos ROS**. La primera subida puede iniciarlo automáticamente; si no, entrá y pulsá **Run workflow > main > Run workflow**.
-3. Esperá a que el proceso de GitHub concluya en **verde**. Abrí los pasos de la ejecución: debe confirmar elementos para CABA, Lomas y La Plata. Si falla en rojo, **no des la aplicación por verificada**. Descargá o copiá el mensaje del paso fallido para corregirlo.
-4. Tras la ejecución correcta, en `rosweb/data` deberían aparecer `osm_snapshot_manifest.json`, varios `osm_part_000.bin` etc. y, si respondió la fuente del Censo CABA, `censo_caba_2022.geojson.gz`.
-5. Abrí `https://rosweb.streamlit.app/?diagnostico=1` para comprobar «Base OSM: disponible». Si sigue sin figurar, reiniciá la app desde **Manage app > Reboot app** y verificá que el workflow realmente haya escrito en `main`.
-6. Probá una dirección de CABA y una de Provincia, y corroborá el desglose de cinco dimensiones. **No anuncies la app para uso comercial hasta completar estas pruebas reales en Streamlit Cloud.**
+## Publicar la actualización en rosweb.streamlit.app
 
-**Si el paso 3 falla al hacer `git push`**: en GitHub abrí `Settings > Actions > General > Workflow permissions` y verificá los permisos de escritura del repositorio. El workflow ya solicita `contents: write`. Volvé a ejecutarlo. Más detalles: https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow
+- Descomprimí todo este ZIP.
+- En GitHub, en tu repositorio `rosweb`, reemplazá el contenido por estos archivos (no subas el ZIP cerrado).
+- Confirmá con **Commit changes** en `main`.
+- Asegurate de que se vea `.github/workflows/update-maps.yml` y la carpeta `scripts/`.
+- En GitHub, abrí **Actions → Preparar datos cartograficos ROS → Run workflow** si no arrancó automáticamente.
+- **Esperá a que ese proceso termine en verde antes de evaluar la web.** Su tarea es descargar extractos actuales de OpenStreetMap de Provincia de Buenos Aires y CABA, convertirlos en una base de datos local y publicar los archivos `data/osm_part_*.bin` y `data/osm_snapshot_manifest.json` en el repositorio. No hay que subirlos manualmente.
+- Volvé a cargar `https://rosweb.streamlit.app/` una vez publicados los mapas.
 
-La carga del extracto argentino completo sucede en GitHub (proceso del administrador), **nunca cuando un visitante hace clic**. Se actualiza automáticamente el primer día de cada mes; la programación depende de que GitHub Actions esté habilitado.
+### Verificar sin mostrar mensajes técnicos al público
 
-## Archivos principales
+Abrí `https://rosweb.streamlit.app/?diagnostico=1`. En *Estado técnico de las fuentes* debe figurar **Base OSM: disponible** y **Censo PBA: disponible**. Para direcciones en CABA, la app utiliza el Censo 2022 de su fuente geográfica, preferentemente una copia local si el proceso de GitHub consiguió publicarla.
 
-- `app.py`: interfaz pública.
-- `engine.py`: cálculo territorial.
-- `services.py`: geocodificación de la dirección y lectura de redes.
-- `osm_snapshot.py`: lector de base OSM verificada, sin internet.
-- `scripts/build_osm_snapshot.py`: construye la base desde Geofabrik en GitHub Actions.
-- `.github/workflows/update-maps.yml`: automatiza la descarga, comprobaciones y publicación.
-- `data/censo_pba_2022.geojson.gz`: Censo 2022 PBA, incorporado.
-- `caba_censo.py` y `scripts/build_caba_snapshot.py`: población 2022 CABA.
+Cuando falta la base OSM, la app intenta una consulta acotada a Overpass como contingencia, pero **Overpass público no garantiza respuesta**. La base OSM local es la solución principal.
 
-## Cobertura y límites
+### Si el proceso de mapas de GitHub falla
 
-- Datos OSM y población: PBA y CABA. Otras provincias no tienen garantía de cobertura con este paquete.
-- Cinco componentes: demanda residencial (35%), actividad comercial registrada en OSM (25%), accesibilidad y transporte registrados (15%), demanda frente a competencia (15%), servicios complementarios (10%).
-- **No incluye características físicas del inmueble**.
-- Se admite CSV o Excel con columna `Dirección` o coordenadas `Latitud`/`Longitud`; `Cadena` es opcional. Si tenés coordenadas de la red, mejoran el análisis de las tiendas propias cercanas.
-- Geocodificar una dirección sigue requiriendo un proveedor público (Georef, Photon o Nominatim), con sus propias limitaciones. También se aceptan coordenadas del punto copiadas de un mapa en el mismo cuadro de dirección.
-- Las áreas empleadas por este motor son radiales y no isócronas caminando. El score **no predice ventas reales ni es una probabilidad de éxito**.
+Abrí el trabajo fallido en *Actions* y revisá el primer paso rojo. Si el error es `Permission denied` al hacer push, revisá en GitHub `Settings → Actions → General → Workflow permissions` y autorizá **Read and write permissions** para el repositorio. Si el fallo es por una descarga externa, los datos NO se publican como si estuvieran completos.
 
-## Pruebas
+## Datos y fuentes
 
-`python -m pytest -q test_app.py test_caba.py test_snapshot.py test_web.py`
+- Geocodificación: Georef Argentina (V2/V0), Photon y Nominatim como alternativa para consultas puntuales; también admite coordenadas obtenidas de un mapa.
+- Censo 2022 PBA: `data/censo_pba_2022.geojson.gz` incluido, población ponderada por superficie de radio; la densidad NO es una medición directa de tránsito peatonal.
+- Censo CABA: radios 2022 en servicio ArcGIS, con publicación automática opcional del extracto local.
+- Actividad, transporte, supermercados, servicios: OpenStreetMap, inicialmente datos regionales de `download.openstreetmap.fr`, licencia ODbL, © OpenStreetMap contributors. Los registros OSM pueden estar incompletos.
 
-Se prueban cálculos, lectura de CSV, importación de red parcialmente geocodificada, reconstrucción de una base SQLite dividida en partes y detección de una copia corrupta con **datos sintéticos de prueba**. Eso no sustituye ejecutar GitHub Actions con el **extracto OSM real** y probar la web ya desplegada.
+No poner contraseñas, datos comerciales sensibles ni información privada en un repositorio público.
+
+## Pruebas incluidas
+
+```bash
+python test_app.py
+python test_integration.py
+python test_presentation_smoke.py
+```
+
+Son pruebas locales con datos simulados en los apartados de servicios. **No prueban la conexión real de Streamlit Cloud**. Para certificar la publicación hay que ejecutar el proceso de mapas y evaluar al menos una dirección real con y sin red.

@@ -14,24 +14,47 @@ def test_censo_carga_y_pop_interior():
     assert x['coverage_800'] >= 95
     assert 0 <= demand_score(x) <= 100
 
-def test_no_censo_en_caba():
-    assert population_at(-34.60,-58.42) is None
+def test_censo_caba_consulta_capas_2022():
+    with patch('engine.population_caba_at', return_value={400:2000,800:7000,1200:14000,'coverage_800':100,'fuente':'CABA'}) as mocked:
+        assert population_at(-34.60,-58.42)[800] == 7000
+    assert mocked.called
 
 def test_no_inventa_sin_osm():
     res=compute_result(-34.77,-58.40,None,[])
-    assert res['coverage']==35 and res['scores']['Actividad comercial'] is None
-    assert res['score'] is not None and res['status'].startswith('Parcial')
+    assert res['coverage']==0
+    assert not res['ready']
+    assert res['score'] is None
+    assert all(v is None for v in res['scores'].values())
+
 
 def test_cinco_componentes_con_fuente_osm():
-    fake=[{'type':'node','tags':{'shop':'supermarket','name':'Mercado ABC'}},
-          {'type':'node','tags':{'shop':'bakery'}},
-          {'type':'node','tags':{'highway':'bus_stop'}},
-          {'type':'way','tags':{'highway':'tertiary'}},
-          {'type':'node','tags':{'amenity':'school'}}]
-    res=compute_result(-34.77,-58.4,fake,[])
-    assert res['coverage']==100
+    fake=[{'type':'node','id':i,'tags':{'shop':'bakery'}} for i in range(12)]
+    fake += [{'type':'node','id':100+i,'tags':{'highway':'bus_stop'}} for i in range(6)]
+    fake += [{'type':'node','id':200+i,'tags':{'amenity':'school'}} for i in range(8)]
+    fake += [{'type':'way','id':300+i,'tags':{'highway':'tertiary'}} for i in range(12)]
+    fake += [{'type':'node','id':400,'tags':{'shop':'supermarket','name':'Mercado ABC'}}]
+    network=[{'Nombre':'Otro local','Latitud':-34.7703,'Longitud':-58.4100}]
+    res=compute_result(-34.77,-58.40,fake,network)
+    assert res['coverage']==100 and res['ready']
     assert all(v is not None for v in res['scores'].values())
-    assert res['osm']['supermercados_terceros']==1
+    assert res['osm']['supermercados_competidores']==1
+    assert 0<=res['score']<=100
+
+
+def test_con_pocos_comercios_no_producir_falso_score():
+    tiny=[{'type':'node','tags':{'shop':'bakery'}},
+          {'type':'node','tags':{'shop':'supermarket'}},
+          {'type':'way','tags':{'highway':'tertiary'}}]
+    net=[{'Latitud':-34.7702,'Longitud':-58.4201}]
+    result=compute_result(-34.77,-58.40,tiny,net)
+    assert result['score'] is None and not result['ready']
+
+
+def test_red_incompleta_no_bloquea_el_score():
+    network=[{'Latitud':-34.772,'Longitud':-58.412},
+             {'Latitud':None,'Longitud':None}]
+    res=compute_result(-34.77,-58.4,[],network)
+    assert 'network' not in res['issues']
 
 def test_no_competencia_de_cadena_propia():
     data=[{'tags':{'shop':'supermarket','name':'Supermercado DÍA'},'type':'node'},

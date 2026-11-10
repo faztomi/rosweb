@@ -23,24 +23,36 @@ ROOT=Path(__file__).resolve().parents[1]
 DATA=ROOT/'data'
 DATA.mkdir(exist_ok=True)
 DEST=DATA/'osm_pba_caba.sqlite.gz'
-PBF=Path('/tmp/ros_argentina.osm.pbf')
+PBF_FILES=[Path('/tmp/ros_pba.osm.pbf'),Path('/tmp/ros_caba.osm.pbf')]
 TEMP=Path('/tmp/ros_osm_2022.sqlite')
-SOURCE='https://download.geofabrik.de/south-america/argentina-latest.osm.pbf'
+SOURCES=[
+    'https://download.openstreetmap.fr/extracts/south-america/argentina/buenos_aires-latest.osm.pbf',
+    'https://download.openstreetmap.fr/extracts/south-america/argentina/buenos_aires_city-latest.osm.pbf',
+]
 # Bounded regional coverage: CABA + PBA (bbox includes some neighboring strips).
 MIN_LAT,MAX_LAT,MIN_LON,MAX_LON=-41.6,-33.1,-63.9,-56.0
 
 
 def download():
-    if PBF.is_file() and PBF.stat().st_size > 50_000_000:
-        return
-    print('Downloading Geofabrik Argentina OSM extract', flush=True)
-    with requests.get(SOURCE,stream=True,timeout=(40,180),headers={'User-Agent':'ROS-Web-public-snapshot-builder/1.0'}) as r:
-        r.raise_for_status()
-        with PBF.open('wb') as f:
-            for chunk in r.iter_content(1<<20):
-                if chunk: f.write(chunk)
-    if PBF.stat().st_size < 50_000_000:
-        raise RuntimeError('Geofabrik download is incomplete; refusing to publish')
+    """Use smaller current PBA and CABA regional OSM extracts instead of the country PBF.
+
+    The OSM data source is a public French mirror; no user key is necessary.
+    Avoid publishing when either download fails, rather than silently losing CABA.
+    """
+    for url, target, min_size in zip(SOURCES,PBF_FILES,[5_000_000,1_000_000]):
+        if target.is_file() and target.stat().st_size>=min_size:
+            continue
+        print('Downloading:',url,flush=True)
+        temp=target.with_suffix('.part')
+        with requests.get(url,stream=True,timeout=(25,90),headers={
+              'User-Agent':'ROS-Web-geographic-snapshot-builder/2.0 (https://rosweb.streamlit.app)'}) as r:
+            r.raise_for_status()
+            with temp.open('wb') as f:
+                for chunk in r.iter_content(1<<20):
+                    if chunk: f.write(chunk)
+        if temp.stat().st_size<min_size:
+            raise RuntimeError('OSM extract too small; refusing to publish '+url)
+        temp.replace(target)
 
 
 class Writer(osmium.SimpleHandler):
@@ -85,8 +97,10 @@ class Writer(osmium.SimpleHandler):
         highway=tags.get('highway')
         railway=tags.get('railway')
         pt=tags.get('public_transport')
-        wanted_amen={'school','kindergarten','hospital','clinic','doctors','pharmacy',
-          'bank','atm','university','college','post_office','marketplace'}
+        wanted_amen={'school','kindergarten','hospital','clinic','doctors','dentist',
+          'pharmacy','bank','atm','university','college','post_office',
+          'marketplace','library','community_centre',
+          'restaurant','cafe','fast_food','bar','pub','food_court'}
         transport=(highway=='bus_stop' or pt in {'platform','stop_position','station'} or
                    railway in {'station','halt','tram_stop'})
         roads={'primary','secondary','tertiary','residential','unclassified','living_street',
@@ -152,7 +166,9 @@ def build():
     db.execute('CREATE TABLE meta (key TEXT PRIMARY KEY,value TEXT)')
     proc=Writer(db)
     print('Reading OSM nodes and ways', flush=True)
-    proc.apply_file(str(PBF),locations=True,idx='flex_mem')
+    for pbf in PBF_FILES:
+        print('Processing',pbf.name,flush=True)
+        proc.apply_file(str(pbf),locations=True,idx='flex_mem')
     proc.flush()
     if proc.count < 40000:
         raise RuntimeError(f'Only {proc.count} records; refusing to publish incomplete OSM data')
@@ -188,7 +204,7 @@ def build():
         if src.read(1):raise RuntimeError('Snapshot > 3.5GB. Cannot publish')
     manifest={'format':'ros-sqlite-gzip-v1','parts':parts,
               'sha256':digest.hexdigest(),'bytes':size,'features':proc.count,
-              'downloaded_at':vals['downloaded_at'],'source':SOURCE}
+              'downloaded_at':vals['downloaded_at'],'source':SOURCES}
     (DATA/'osm_snapshot_manifest.json').write_text(json.dumps(manifest,indent=2),encoding='utf-8')
     # Old parts are not used and should not stay in the repository.
     for file in DATA.glob('osm_part_*.bin'):
