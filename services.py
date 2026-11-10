@@ -307,7 +307,10 @@ def overpass_pois(lat, lon):
                 continue
             # A zero-element dataset isn't a proven complete commercial census.
             data=[{'id':i.get('id'),'type':i.get('type'),
-                   'tags':i.get('tags') or {}} for i in payload['elements']]
+                   'tags':i.get('tags') or {},
+                   'lat':i.get('lat', (i.get('center') or {}).get('lat')),
+                   'lon':i.get('lon', (i.get('center') or {}).get('lon'))}
+                  for i in payload['elements']]
             if not data:
                 continue
             cache_write(key, data)

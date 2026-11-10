@@ -12,6 +12,7 @@ from pyproj import Transformer
 from shapely.geometry import shape, Point
 from shapely.ops import transform
 from shapely.strtree import STRtree
+from caba_censo import population_caba_at
 
 HERE = Path(__file__).resolve().parent
 CENSUS = HERE / 'data' / 'censo_pba_2022.geojson.gz'
@@ -65,6 +66,11 @@ def census_index():
 
 def population_at(lat,lon,radii=(400,800,1200)):
     if not (-43 <= lat <= -32 and -65 <= lon <= -55):return None
+    # CABA es una jurisdicción aparte de la base de Provincia de Buenos Aires.
+    # Este servicio consulta radios 2022 sin pedir al usuario que cargue archivos.
+    if -34.75 < lat < -34.49 and -58.56 < lon < -58.31:
+        pop_caba=population_caba_at(lat,lon,radii)
+        if pop_caba is not None:return pop_caba
     index = census_index()
     if index is None:
         return None
@@ -92,6 +98,7 @@ def population_at(lat,lon,radii=(400,800,1200)):
     if area_covered[800]<0.90:return None
     totals['coverage_800']=round(area_covered[800]*100)
     totals['density_800']=round(totals[800]/(math.pi*.8**2))
+    totals['fuente']='INDEC, Censo 2022 · radios de Provincia de Buenos Aires'
     return totals
 
 
@@ -108,10 +115,11 @@ def norm(text):
     return ' '.join(''.join(x if x.isalnum() else ' ' for x in txt).split())
 
 
-def poi_classify(items, own_brand=''):
+def poi_classify(items, own_brand='', own_locations=None):
     """Classify OSM elements into raw evidence counts; results from a successful query only."""
     commercial=[]; amenities=[];transport=[];roads=[];competitors=[];own_osm=[]
     own=norm(own_brand)
+    own_locations=own_locations or []
     for obj in items:
         tags=obj.get('tags') or {}
         typ=tags.get('shop','')
@@ -127,8 +135,14 @@ def poi_classify(items, own_brand=''):
         if highway=='bus_stop' or railway in {'station','halt','tram_stop'} or trans in {'platform','stop_position','station'}:transport.append(obj)
         if highway in {'primary','secondary','tertiary','residential','pedestrian','footway'} and obj.get('type')=='way': roads.append(obj)
         if typ=='supermarket':
-            if own and own in brand:own_osm.append(obj)
-            else: competitors.append(obj)
+            nearby_owned=False
+            if obj.get('lat') is not None and obj.get('lon') is not None:
+                try:
+                    nearby_owned=any(geo_dist(float(obj['lat']),float(obj['lon']), a,b) <= 45
+                                     for a,b in own_locations)
+                except (TypeError,ValueError):pass
+            if nearby_owned or (own and own in brand):own_osm.append(obj)
+            else:competitors.append(obj)
     return dict(commercial=commercial, amenities=amenities,transport=transport,roads=roads,competitors=competitors,own_osm=own_osm)
 
 
@@ -203,7 +217,10 @@ def compute_result(lat, lon, osm=None, branches=None, own_brand='', network_qual
     if osm is None:
         issues.append('osm')
     else:
-        classes = poi_classify(osm, own_brand=own_brand)
+        classes = poi_classify(
+            osm, own_brand=own_brand,
+            own_locations=[(float(row['Latitud']),float(row['Longitud'])) for row in valid_rows]
+        )
         raw = {
             'comercios':len(classes['commercial']),
             'servicios':len(classes['amenities']),

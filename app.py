@@ -7,14 +7,17 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+import os
 
 import pandas as pd
 import streamlit as st
 
-from engine import CENSUS, WEIGHTS, compute_result, norm, population_at
+from engine import WEIGHTS, compute_result, norm, population_at
 from services import geocode, geocode_network_georef, overpass_pois, read_network, valid_latlon
 
 log = logging.getLogger('rosweb')
+# En modo público no se guarda el texto de direcciones ingresadas por visitantes.
+os.environ.setdefault('ROS_PUBLIC', '1')
 
 st.set_page_config(page_title='ROS | Evaluador comercial', page_icon='📍',
                    layout='centered', initial_sidebar_state='collapsed')
@@ -39,19 +42,22 @@ st.markdown('<div class="ros-kicker">ROS / INTELIGENCIA TERRITORIAL</div>', unsa
 st.title('Evaluador comercial')
 st.markdown('<p class="ros-subtitle">Compará el potencial de una ubicación con criterios territoriales y comerciales.</p>', unsafe_allow_html=True)
 
-# A missing bundled dataset is a deployment fault. It is never a visitor task.
-if not CENSUS.is_file():
-    log.error('No existe el archivo de población requerido en %s', CENSUS)
-    st.info('Estamos actualizando la información del evaluador. Volvé a ingresar más tarde.')
-    st.stop()
+@st.cache_data(show_spinner=False, ttl=3600)
+def _read_upload(filename:str, contents:bytes):
+    return read_network(filename,contents)
+
 
 with st.container(border=True):
-    st.markdown('**1. Cargá tu red de sucursales**')
+    st.markdown('**1. Subí las sucursales de tu negocio**')
     upload = st.file_uploader('Archivo CSV o Excel', type=['csv', 'xlsx', 'xlsm'],
                                label_visibility='collapsed')
     if upload is not None:
-        st.caption('Red seleccionada: ' + upload.name)
-    st.markdown('**2. Ingresá la dirección**')
+        try:
+            preview_net=_read_upload(upload.name, upload.getvalue())
+            st.caption(f'{len(preview_net):,} sucursales seleccionadas'.replace(',', '.'))
+        except (ValueError, KeyError, TypeError):
+            st.caption('No pudimos leer el archivo. Usá un Excel o CSV con direcciones de sucursales.')
+    st.markdown('**2. Ingresá la dirección a evaluar**')
     address = st.text_input('Dirección', label_visibility='collapsed',
                             placeholder='Calle y altura, localidad, provincia')
     submitted = st.button('Calcular score', type='primary', use_container_width=True)
@@ -62,10 +68,6 @@ def _brand(df:pd.DataFrame, filename:str) -> str:
         s=df['Cadena'].astype(str).str.strip().replace('', pd.NA).dropna()
         if not s.empty:
             return str(s.mode()[0])
-    n=norm(filename)
-    for brand in ('DIA', 'Carrefour', 'Coto', 'Jumbo', 'Vea', 'Disco', 'Chango Mas', 'La Anonima'):
-        if norm(brand) in n:
-            return brand
     return ''
 
 
@@ -95,7 +97,8 @@ def _render_result(out:dict, location:str, network:pd.DataFrame, source:str) -> 
     pop=out.get('poblacion') or {}
     osm=out.get('osm') or {}
     with st.expander('Datos y metodología'):
-        st.write('Indicadores basados en población del Censo 2022 y elementos comerciales registrados en OpenStreetMap.')
+        st.write('Indicadores de población del Censo 2022 y establecimientos registrados en OpenStreetMap.')
+        st.write('Fuente de población:',pop.get('fuente','Censo 2022') if pop else '—')
         st.write('Población residencial estimada dentro de 800 m:',f"{int(pop[800]):,}".replace(',','.') if pop else '—')
         st.write('Comercios OSM registrados en el entorno:',osm.get('comercios','—'))
         st.write('Transporte registrado:',osm.get('transporte','—'))
@@ -109,14 +112,14 @@ def _render_result(out:dict, location:str, network:pd.DataFrame, source:str) -> 
 
 if submitted:
     if upload is None:
-        st.warning('Seleccioná primero el archivo con la red de sucursales.')
+        st.warning('Subí un archivo Excel o CSV con las sucursales de tu negocio.')
     elif not address.strip():
         st.warning('Ingresá una dirección para evaluar.')
     else:
         try:
             if upload.size > 15_000_000:
                 raise ValueError('El archivo supera el tamaño permitido.')
-            network=read_network(upload.name, upload.getvalue())
+            network=_read_upload(upload.name, upload.getvalue())
             if network.empty:
                 raise ValueError('El archivo no contiene sucursales utilizables.')
         except Exception as exc:
@@ -145,7 +148,7 @@ if submitted:
                 log.exception('Error en base territorial')
         if pop is None:
             # No census file paths or administrator setup messages in the public UI.
-            _unavailable('Por el momento no contamos con suficiente información territorial validada para evaluar esta ubicación.')
+            _unavailable('No fue posible completar la evaluación de esta dirección. Probá nuevamente más tarde.')
             st.stop()
         with st.spinner('Contrastando comercios, transporte y red de sucursales…'):
             try:
