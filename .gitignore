@@ -1,10 +1,6 @@
 __pycache__/
-.pytest_cache/
-*.pyc
-*.sqlite3
-*.db
-.streamlit/secrets.toml
+*.py[cod]
+.venv/
 .env
-red_actual.csv
-red_meta.json
+.streamlit/secrets.toml
 .DS_Store

@@ -1,230 +1,158 @@
-"""ROS Web: single-screen public experience, never publishes incomplete scores.
+"""Adaptación web mínima del evaluador local V37.
 
-The model is heuristic and does not include building-level or financial variables.
-An unavailable source is an unavailable evaluation, never a fabricated low score.
+El motor de localización y microentorno es el original, no un scoring nuevo.
+No utiliza los paquetes ROS Web v2-v5, ninguna base OSM externa ni Actions.
 """
 from __future__ import annotations
 
-import logging
+import re
 from pathlib import Path
-import os
-
-import pandas as pd
 import streamlit as st
+import pandas as pd
 
-from engine import WEIGHTS, compute_result, norm, population_at
-from services import geocode, read_network, valid_latlon, overpass_pois
-from osm_snapshot import local_osm, snapshot_metadata
+from datos_externos import leer_censo_csv, aplicar_censo
+from osm_resiliente import locate
+import v37_original as v37
 
-log = logging.getLogger('rosweb')
-# En modo público no se guarda el texto de direcciones ingresadas por visitantes.
-os.environ.setdefault('ROS_PUBLIC', '1')
+ROOT = Path(__file__).resolve().parent
 
-st.set_page_config(page_title='ROS | Evaluador comercial', page_icon='📍',
-                   layout='centered', initial_sidebar_state='collapsed')
-st.markdown('''<style>
-  .block-container {max-width: 830px; padding-top: 2.1rem; padding-bottom: 3.0rem}
-  #MainMenu, footer {visibility: hidden}
-  h1, h2, h3 {letter-spacing: -.025em}
-  h1 {font-size: 2.2rem !important; margin-bottom:.4rem !important}
-  .ros-kicker {font-size:.76rem; font-weight:750; letter-spacing:.12em; color:#159688; margin-bottom:.4rem}
-  .ros-subtitle {font-size:1.06rem; color:#8f969f; line-height:1.55; margin-bottom:1.4rem}
-  .ros-panel {padding: 1.1rem 1.4rem; border: 1px solid rgba(127,141,151,.23); border-radius:15px; margin: 1rem 0}
-  .ros-big {font-size:3.4rem; font-weight:760; line-height:1.05; letter-spacing:-.045em}
-  .ros-grey {color:#9099a2; font-size:.9rem; line-height:1.5}
-  .ros-mark {font-weight:750; color:#159688; font-size:.76rem; letter-spacing:.08em}
-  [data-testid="stFileUploader"] {border-radius: 13px}
-  div.stButton>button[kind="primary"] {font-weight:750; border-radius: 12px; min-height:3rem}
-  div[data-testid="stAlert"] {border-radius: 12px}
-  @media (max-width:600px){h1{font-size:1.85rem!important}.block-container{padding-top:1.3rem}}
-</style>''', unsafe_allow_html=True)
+st.set_page_config(page_title='ROS | Evaluador comercial V37', page_icon='📍', layout='centered')
 
-st.markdown('<div class="ros-kicker">ROS / INTELIGENCIA TERRITORIAL</div>', unsafe_allow_html=True)
-st.title('Evaluador comercial')
-st.markdown('<p class="ros-subtitle">Compará el potencial de una ubicación con criterios territoriales y comerciales.</p>', unsafe_allow_html=True)
-
-@st.cache_data(show_spinner=False, ttl=3600)
-def _read_upload(filename:str, contents:bytes):
-    return read_network(filename,contents)
+@st.cache_data(show_spinner=False)
+def censo_incorporado():
+    resultado={}
+    for nombre in ('CENSO_2022_VERIFICADO.csv','CENSO_2022_MUNICIPIOS.csv'):
+        texto=(ROOT / nombre).read_text(encoding='utf-8-sig')
+        resultado.update(leer_censo_csv(texto))
+    return resultado
 
 
-with st.container(border=True):
-    st.markdown('**1. Subí las sucursales de tu negocio (opcional)**')
-    upload = st.file_uploader('Archivo CSV o Excel', type=['csv', 'xlsx', 'xlsm'],
-                               label_visibility='collapsed')
-    if upload is not None:
-        try:
-            preview_net=_read_upload(upload.name, upload.getvalue())
-            st.caption(f'{len(preview_net):,} sucursales seleccionadas'.replace(',', '.'))
-        except (ValueError, KeyError, TypeError):
-            st.caption('No pudimos leer el archivo. Usá un Excel o CSV con direcciones de sucursales.')
-    st.markdown('**2. Dirección a evaluar**')
-    address = st.text_input('Dirección', label_visibility='collapsed',
-                            placeholder='Calle y altura, localidad, provincia')
-    submitted = st.button('Calcular score', type='primary', use_container_width=True)
-
-
-def _brand(df:pd.DataFrame, filename:str) -> str:
-    if 'Cadena' in df.columns:
-        s=df['Cadena'].astype(str).str.strip().replace('', pd.NA).dropna()
-        if not s.empty:
-            return str(s.mode()[0])
-    # Infer only unambiguous known brands from filename; never require it for score.
-    normalized = norm(filename)
-    known = {'carrefour':'Carrefour','dia':'DIA','coto':'Coto',
-             'jumbo':'Jumbo','disco':'Disco','changomas':'ChangoMás',
-             'vea':'Vea','la anonima':'La Anónima'}
-    for token,value in known.items():
-        if token in normalized.split() or (' ' in token and token in normalized):
-            return value
+def cadena_desde_archivo(nombre, red):
+    texto=v37.norm(nombre)
+    if not red.empty:
+        texto+=' '+' '.join(v37.norm(x) for x in red['Nombre'].head(8).tolist())
+    marcas={'Día':('dia','dia supermercado'), 'Carrefour':('carrefour',),
+            'Coto':('coto',),'Jumbo':('jumbo',),'Disco':('disco',),'Vea':('vea',),
+            'Chango Más':('chango mas','chango'), 'La Anónima':('anonima',)}
+    for nombre,alias in marcas.items():
+        if any(re.search(r'(?<![a-z])'+re.escape(x)+r'(?![a-z])',texto) for x in alias):
+            return nombre
     return ''
 
 
-def _unavailable(message:str) -> None:
-    st.markdown('### Evaluación no disponible')
-    st.info(message)
-    st.caption('No se genera una puntuación cuando la información disponible no permite un cálculo confiable.')
+def registro_para_ubicacion(geo, entrada):
+    rec,matched=v37.resolve_model_location(geo)
+    if rec is not None:
+        return rec,matched
+    # Si Georef devuelve localidad censal distinta del partido, utilizar
+    # únicamente los términos declarados en la dirección o jurisdicción.
+    addr=geo.get('address') or {}
+    candidates=[entrada]+[str(addr.get(k,'')) for k in ('county','city','suburb','municipality','city_district')]
+    for c in candidates:
+        normalized=' '+v37.norm(c)+' '
+        for key,items in v37.LOCATION_INDEX.items():
+            if len(key)>=5 and (' '+key+' ') in normalized:
+                return items[0],c
+    return None,None
 
 
-def _render_result(out:dict, location:str, network:pd.DataFrame, source:str) -> None:
-    score=out['score']
-    label='Muy favorable' if score>=80 else 'Favorable' if score>=65 else 'Intermedio' if score>=45 else 'A revisar'
-    st.markdown('### Resultado de ubicación')
-    st.caption(location)
-    st.markdown('<div class="ros-panel"><div class="ros-mark">ÍNDICE DE ATRACTIVO COMERCIAL</div>'
-                f'<div class="ros-big">{score:.1f}<span style="font-size:1.15rem; color:#89929e"> / 100</span></div>'
-                f'<div class="ros-grey">{label} · Evaluación territorial estimativa</div></div>',
-                unsafe_allow_html=True)
-    st.markdown('#### Desglose del score')
-    for label,weight in WEIGHTS.items():
-        value=out['scores'][label]
-        c1,c2=st.columns([4,1],vertical_alignment='center')
-        c1.markdown('**'+label+'**')
-        c2.markdown(f'**{value:.0f}/100**')
-        st.progress(float(value)/100.0)
-        st.caption(f'Participación en el total: {weight}% · Aporte: {value*weight/100:.1f} puntos')
-    pop=out.get('poblacion') or {}
-    osm=out.get('osm') or {}
-    with st.expander('Datos y metodología'):
-        st.write('Indicadores de población del Censo 2022 y establecimientos registrados en OpenStreetMap.')
-        st.write('Fuente de población:',pop.get('fuente','Censo 2022') if pop else '—')
-        st.write('Población residencial estimada dentro de 800 m:',f"{int(pop[800]):,}".replace(',','.') if pop else '—')
-        st.write('Comercios OSM registrados en el entorno:',osm.get('comercios','—'))
-        st.write('Transporte registrado:',osm.get('transporte','—'))
-        st.write('Servicios registrados:',osm.get('servicios','—'))
-        st.write('Sucursales de la red incorporada:',len(network))
-        st.write('Sucursales con coordenadas verificables:',out.get('red',{}).get('total_verificadas',0))
-        st.caption('La población se distribuye proporcionalmente entre radios censales; no representa afluencia peatonal real. '
-                   'Los elementos de OSM pueden estar incompletos. Las ponderaciones iniciales son heurísticas y aún no están calibradas contra ventas fuera de muestra. '
-                   'El índice no evalúa el estado físico del inmueble, su precio, el contrato ni la normativa de apertura. '
-                   'Fuente comercial: '+source+'.')
+def localizar(direccion):
+    # Georef Argentina + Nominatim + Photon (de la versión local resiliente).
+    candidato=locate(direccion, user_agent='ROS-Expansion-V37/1.0 (evaluador comercial; https://rosweb.streamlit.app)')
+    if candidato is not None:
+        return candidato
+    # Se conserva además la consulta Nominatim de la app V37.
+    return v37.geocode_address(direccion, max_retries=1)
 
 
-def _geocode_cached(address_text:str):
-    # Caching only positive results: negative lookups can work on later attempts.
-    return geocode(address_text)
+def mostrar_resultado(direccion, archivo, formato):
+    red=pd.DataFrame(columns=v37.NETWORK_COLUMNS)
+    marca=''
+    if archivo is not None:
+        archivo.seek(0)
+        red=v37.load_network_upload(archivo)
+        marca=cadena_desde_archivo(archivo.name,red)
+    with st.spinner('Localizando dirección y consultando el entorno comercial…'):
+        geo=localizar(direccion)
+        if not geo:
+            st.error('No pude confirmar esa calle y altura. Revisá la dirección e intentá de nuevo.')
+            return
+        rec,matched=registro_para_ubicacion(geo,direccion)
+        if rec is None:
+            st.warning('Encontré la dirección, pero está fuera de las 81 ubicaciones territoriales de la V37. No asigno una población de otro municipio.')
+            st.caption(geo.get('display_name',''))
+            return
+        lat,lon=float(geo['lat']),float(geo['lon'])
+        try:
+            osm=v37.query_osm_microlocation(lat,lon)
+        except Exception:
+            st.error('La dirección está localizada, pero el servicio de OpenStreetMap no respondió. No se asignará un score sin los comercios verificados.')
+            st.caption(f'Dirección confirmada: {geo.get("display_name", direccion)}')
+            return
+        metrics=v37.derive_micro_metrics(lat,lon,osm)
+        metrics=v37.apply_competition_sources(metrics,lat,lon)
+        census=censo_incorporado()
+        st.session_state['censo2022']=census
+        rec=aplicar_censo(rec,census)
+        red_metricas=v37.company_network_metrics(lat,lon,red)
+        obs=v37.build_company_observations(rec,metrics,red_metricas,company_name=marca)
+        ref=v37.referencias_censales(rec.get('Tipo'))
+        resultado=v37.score_company_location(None,obs,format_name=formato,referencias=ref)
 
-
-def _osm_cached(lat:float,lon:float):
-    local, source = local_osm(lat,lon)
-    if local is not None:
-        return local,source
-    # If the GitHub map snapshot is not yet available, try a *small* live
-    # Overpass query. No map-tile scraping or bulk queries from each visitor.
-    return overpass_pois(lat,lon)
-
-
-def _evaluate(addr:str,net:pd.DataFrame,brand:str):
-    # This function intentionally works with an empty network.
-    try:
-        point = _geocode_cached(addr)
-    except Exception:
-        log.exception('Falló la geolocalización')
-        return {'status':'geocode_error'}
-    if not point:
-        return {'status':'geocode_missing'}
-    try:
-        lat,lon=float(point['lat']),float(point['lon'])
-        if not valid_latlon(lat,lon):
-            return {'status':'geocode_missing'}
-        pop=population_at(lat,lon)
-    except Exception:
-        log.exception('Falló la base demográfica')
-        pop=None
-    try:
-        osm,source=_osm_cached(round(lat,5),round(lon,5))
-    except Exception:
-        log.exception('Falló la consulta comercial')
-        osm,source=None,'Fuente de comercios temporalmente no disponible'
-    # This call does not require branch coordinates; the known coordinates,
-    # if provided, only improve identification of nearby own branches.
-    try:
-        outcome=compute_result(lat,lon,osm=osm,
-                    branches=net.to_dict('records'),own_brand=brand,population=pop)
-    except Exception:
-        log.exception('Falló el motor ROS')
-        return {'status':'calculation_error','point':point}
-    return {'status':'ok','point':point,'result':outcome,'osm_source':source}
-
-
-if submitted:
-    if not address.strip():
-        st.warning('Escribí la calle, la altura y la localidad que querés evaluar.')
+    st.divider()
+    st.subheader('Resultado de la ubicación')
+    st.caption(str(geo.get('display_name') or direccion))
+    if resultado['sufficient_data'] and resultado['commercial_score'] is not None:
+        st.metric('Potencial comercial · V37',f'{resultado["commercial_score"]:.1f} / 100')
+        st.markdown(f'**Lectura:** {v37.v37_output_level(resultado["commercial_score"])}')
     else:
-        network=pd.DataFrame(columns=['Nombre','Dirección','Latitud','Longitud','Cadena'])
-        own_brand=''
-        if upload is not None:
-            try:
-                if upload.size > 15_000_000:
-                    raise ValueError('Archivo demasiado grande')
-                network=_read_upload(upload.name, upload.getvalue())
-                own_brand=_brand(network, upload.name)
-            except Exception:
-                st.warning('El archivo de sucursales no se pudo leer. Podés retirarlo y calcular igualmente el score de la dirección.')
-                st.stop()
-        with st.spinner('Buscando la dirección y analizando su entorno…'):
-            response=_evaluate(address.strip(),network,own_brand)
-        status=response.get('status')
-        if status=='geocode_missing':
-            _unavailable('No encontramos una coincidencia suficientemente clara para esa dirección. Probá agregando partido y provincia, o pegá las coordenadas de Google Maps.')
-        elif status!='ok':
-            _unavailable('La búsqueda presentó un error de conexión. Probá nuevamente. El problema no es la red de sucursales.')
+        st.warning('La V37 no alcanzó la cobertura mínima para publicar un puntaje total. Se muestran las dimensiones verificadas.')
+    st.markdown('#### Desglose original V37')
+    for row in resultado['rows']:
+        nombre=row['Factor']
+        if nombre=='Red propia' and not red_metricas['available']:
+            continue
+        score=row['Score actual']
+        if score is None:
+            st.write(f'**{nombre}:** Sin datos suficientes')
         else:
-            outcome=response['result']
-            point=response['point']
-            quality=str(point.get('quality') or '')
-            if not outcome.get('ready'):
-                issues=set(outcome.get('issues',[]))
-                if 'osm' in issues or 'osm_sparse' in issues:
-                    _unavailable('La dirección se localizó, pero no se pudo obtener suficiente información comercial del mapa. La evaluación no tendrá un puntaje ficticio.')
-                elif 'population' in issues:
-                    _unavailable('La dirección se localizó, pero no hay información demográfica suficiente para completar el resultado.')
-                else:
-                    _unavailable('La dirección se localizó, pero faltan indicadores verificables para completar el score.')
-                st.caption('Dirección localizada: '+str(point.get('label') or address.strip()))
-                with st.expander('Ver qué información se obtuvo'):
-                    st.write('Geolocalización:',point.get('provider','—'),quality)
-                    st.write('Censo:', 'disponible' if outcome.get('poblacion') else 'no disponible')
-                    st.write('Mapa comercial:',response['osm_source'])
-                    st.write('Códigos de diagnóstico:',', '.join(outcome.get('issues',[])))
-            else:
-                _render_result(outcome,address.strip(),network,response['osm_source'])
-                if quality not in {'Altura indicada en resultado (verificar)','Coordenadas aportadas','Altura exacta'}:
-                    st.caption('Ubicación aproximada: el proveedor cartográfico no confirmó la altura exacta. El score describe el entorno de ese punto, no la puerta del inmueble.')
+            st.write(f'**{nombre}: {score:.1f}/100** · {row["Cobertura %"]:.0f}% de cobertura')
+            st.progress(max(0.0,min(1.0,float(score)/100.0)))
+    cols=st.columns(3)
+    cols[0].metric('Comercios relevados',str(metrics['activity_relevant_pois_500']))
+    cols[1].metric('Paradas cercanas',str(metrics['transit_500']))
+    cols[2].metric('Supermercados ≤1 km',str(metrics['supermarkets_1000']))
+    if metrics['nearby_supermarkets']:
+        with st.expander('Supermercados identificados y distancias'):
+            for p in metrics['nearby_supermarkets'][:12]:
+                if p.get('distance_m') is not None:
+                    st.write(f"{p.get('name') or 'Supermercado'} · {p['distance_m']:.0f} m (línea recta)")
+    with st.expander('Datos territoriales utilizados'):
+        st.write(f"Unidad: {rec.get('Ubicación')} · {rec.get('Tipo')}")
+        st.write(f"Población de la unidad territorial: {rec.get('Población'):,}" if rec.get('Población') is not None else 'Población no disponible')
+        st.write(f"Fuente: {rec.get('Fuente población', 'serie histórica territorial sin año verificado')}")
+        st.caption('La V37 utiliza datos por barrio o municipio, no por radio caminable. Este índice es exploratorio y no constituye una previsión de ventas.')
+    if archivo is not None and not red_metricas['available']:
+        st.caption('Red cargada sin coordenadas verificadas: se calculó el potencial comercial sin penalizar ni premiar la proximidad a sucursales propias.')
+    if red_metricas['available'] and resultado.get('expansion_score') is not None and resultado['sufficient_data']:
+        st.metric('Conveniencia de apertura · con red',f'{resultado["expansion_score"]:.1f} / 100')
+    st.map(pd.DataFrame([{'lat':lat,'lon':lon}]), zoom=14)
 
-st.divider()
-st.caption('© OpenStreetMap contributors (ODbL). Índice exploratorio de atractivo territorial. No predice facturación ni reemplaza una evaluación comercial profesional. '
-           'Cada persona utiliza su propia red durante la sesión.')
 
-# Soporte técnico optativo, no visible en la interfaz pública habitual.
-if st.query_params.get('diagnostico') == '1':
-    with st.expander('Estado técnico de las fuentes'):
-        meta = snapshot_metadata()
-        st.write('Base OSM:', 'disponible' if meta else 'no cargada')
-        if meta:
-            st.write('Fecha de corte:', meta.get('downloaded_at', '—'))
-            st.write('Elementos cartográficos:', meta.get('features', '—'))
-        from engine import CENSUS
-        st.write('Censo PBA:', 'disponible' if CENSUS.is_file() else 'no cargado')
-        from pathlib import Path
-        st.write('Censo CABA:', 'disponible' if (Path(__file__).parent/'data/censo_caba_2022.geojson.gz').is_file() else 'no cargado')
+st.title('Evaluador comercial')
+st.caption('Motor territorial y OpenStreetMap de la versión local V37.')
+red_subida=st.file_uploader('Red de sucursales (opcional)',type=['csv','xlsx'])
+direccion=st.text_input('Dirección a evaluar',placeholder='Mariano S. Ioria 355, Lomas de Zamora, Buenos Aires')
+with st.expander('Formato de supermercado (opcional)'):
+    formato=st.selectbox('Formato', ['Express','Market','Hiper','Maxi'],index=0)
+if st.button('Calcular score', type='primary', use_container_width=True):
+    if not direccion.strip():
+        st.warning('Ingresá una dirección para comenzar.')
+    else:
+        try:
+            mostrar_resultado(direccion.strip(),red_subida,formato)
+        except (ValueError,KeyError,TypeError) as exc:
+            st.error('No pude procesar la información de entrada. Revisá el formato del archivo y la dirección.')
+            st.caption(type(exc).__name__)
+
+st.caption('© OpenStreetMap contributors · ROS V37 · Análisis comercial exploratorio, sin evaluación edilicia.')
