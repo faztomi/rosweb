@@ -1,9 +1,0 @@
-Controles realizados el 10/11/2026:
-- Código Python compilado sin errores de sintaxis.
-- Censo 2022 por municipio: Lomas de Zamora = 690.323 habitantes (CSV original).
-- Censo 2022 por barrio CABA: 48 barrios incorporados.
-- Motor de scoring V37 con respuesta OSM simulada: cálculos correctos con y sin red.
-- Pantalla pública simulada con respuesta OSM: sin errores con o sin red.
-- Georef: interpretación de Mariano S. Ioria 355 y de calle numerada 9 de Julio 500, con respuestas simuladas.
-
-LIMITACIÓN FUNDAMENTAL: No se pudo ejecutar la app contra Overpass desde el servidor real Streamlit Cloud. Los servicios públicos pueden rechazar una IP compartida; estas pruebas no garantizan su respuesta. Nunca publicar puntajes basados en datos no obtenidos.
