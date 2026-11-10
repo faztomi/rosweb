@@ -334,41 +334,74 @@ def geocode_network_georef(df):
     return out,found
 
 
+def _clean_overpass_response(payload):
+    """Transform an actual complete OSM reply. Never turn failure into zero records."""
+    if not isinstance(payload, dict) or payload.get('remark') or not isinstance(payload.get('elements'),list):
+        return None
+    rows = []
+    seen = set()
+    for i in payload['elements']:
+        ident=(i.get('type'),i.get('id'))
+        if ident in seen: continue
+        seen.add(ident)
+        tags=i.get('tags') or {}
+        center=i.get('center') or {}
+        la=i.get('lat',center.get('lat'))
+        lo=i.get('lon',center.get('lon'))
+        if not valid_latlon(la,lo):continue
+        rows.append({'id':i.get('id'),'type':i.get('type'), 'tags':tags,
+                     'lat':float(la),'lon':float(lo)})
+    return rows
+
+
+def _post_overpass(endpoint,query):
+    """Try one bounded query, with standard server timeout and identifiable agent."""
+    response=requests.post(endpoint, data={'data':query}, headers=HEADERS,
+                           timeout=(5,17))
+    response.raise_for_status()
+    return _clean_overpass_response(response.json())
+
+
 def overpass_pois(lat, lon):
-    """Full OSM features from an actual Overpass response. NEVER use map tiles
-    as a proxy for exhaustive business coverage; don't cache failures or partial
-    cartographic samples as complete census data.
+    """Old V37 style direct OSM query fallback if no local map snapshot.
+
+    Queries are triggered by user action. No map tiles or fabricated POI counts.
+    Results are cached only after all data categories have responded.
+    First try the combined query, then two smaller queries on an alternative
+    server. Return None when the server cannot provide complete evidence.
     """
-    key = f'osm_complete:v7:{round(lat,4)}:{round(lon,4)}'
-    cached = cache_read(key, max_age=7*86400)
-    if isinstance(cached, list) and cached:
-        return cached, 'OpenStreetMap (consulta almacenada, hasta 7 días)'
-    query = f'''[out:json][timeout:20];(
-      nwr(around:700,{lat:.6f},{lon:.6f})["shop"];
-      nwr(around:700,{lat:.6f},{lon:.6f})["amenity"~"^(school|kindergarten|hospital|clinic|doctors|dentist|pharmacy|bank|atm|university|college|post_office|marketplace|library|community_centre|restaurant|cafe|fast_food|bar|pub|food_court)$"];
-      nwr(around:700,{lat:.6f},{lon:.6f})["highway"="bus_stop"];
-      nwr(around:700,{lat:.6f},{lon:.6f})["public_transport"];
-      nwr(around:700,{lat:.6f},{lon:.6f})["railway"~"^(station|halt|tram_stop)$"];
-      way(around:450,{lat:.6f},{lon:.6f})["highway"~"^(primary|secondary|tertiary|residential|pedestrian|footway)$"];
-    );out tags center qt;'''
-    for endpoint in OVERPASS:
+    key = f'osm_complete:v8:{round(lat,4)}:{round(lon,4)}'
+    cached=cache_read(key,max_age=7*86400)
+    if isinstance(cached,list) and cached:
+        return cached,'OpenStreetMap · consulta verificada almacenada'
+
+    header='[out:json][timeout:22];('
+    footer=');out tags center qt;'
+    shops=f'nwr(around:700,{lat:.6f},{lon:.6f})["shop"];'
+    amenities=f'nwr(around:700,{lat:.6f},{lon:.6f})["amenity"~"^(school|kindergarten|hospital|clinic|doctors|dentist|pharmacy|bank|atm|university|college|post_office|marketplace|library|community_centre|restaurant|cafe|fast_food|bar|pub|food_court)$"];'
+    transit=(f'nwr(around:700,{lat:.6f},{lon:.6f})["highway"="bus_stop"];'
+             f'nwr(around:700,{lat:.6f},{lon:.6f})["public_transport"];'
+             f'nwr(around:700,{lat:.6f},{lon:.6f})["railway"~"^(station|halt|tram_stop)$"];')
+    roads=f'way(around:450,{lat:.6f},{lon:.6f})["highway"~"^(primary|secondary|tertiary|residential|pedestrian|footway)$"];'
+    all_query=header+shops+amenities+transit+roads+footer
+    # Two independent servers first. Mirrors can return a 429 from shared cloud IPs.
+    for endpoint in OVERPASS[:2]:
         try:
-            response = requests.post(endpoint, data={'data':query}, headers=HEADERS,
-                                     timeout=(4,12))
-            response.raise_for_status()
-            payload=response.json()
-            if not isinstance(payload.get('elements'),list) or payload.get('remark'):
-                continue
-            # A zero-element dataset isn't a proven complete commercial census.
-            data=[{'id':i.get('id'),'type':i.get('type'),
-                   'tags':i.get('tags') or {},
-                   'lat':i.get('lat', (i.get('center') or {}).get('lat')),
-                   'lon':i.get('lon', (i.get('center') or {}).get('lon'))}
-                  for i in payload['elements']]
-            if not data:
-                continue
-            cache_write(key, data)
-            return data, 'OpenStreetMap (consulta geográfica completa)'
-        except (requests.RequestException,ValueError,KeyError,TypeError):
-            continue
-    return None, 'Servicio geográfico no disponible'
+            data=_post_overpass(endpoint,all_query)
+            if data:
+                cache_write(key,data)
+                return data,'OpenStreetMap · consulta completa en vivo'
+        except (requests.RequestException,ValueError,KeyError,TypeError):pass
+    # Fall back to two smaller queries; both must succeed.
+    for endpoint in OVERPASS[2:]:
+        try:
+            group_a=_post_overpass(endpoint,header+shops+amenities+footer)
+            group_b=_post_overpass(endpoint,header+transit+roads+footer)
+            if group_a is None or group_b is None:continue
+            merged={ (i['type'],i['id']):i for i in group_a+group_b }
+            if merged:
+                data=list(merged.values())
+                cache_write(key,data)
+                return data,'OpenStreetMap · consultas divididas verificadas'
+        except (requests.RequestException,ValueError,KeyError,TypeError):continue
+    return None,'OpenStreetMap no respondió a las consultas de esta sesión'

@@ -118,9 +118,13 @@ def local_osm(lat:float,lon:float):
                  WHERE r.max_lon>=? AND r.min_lon<=? AND r.max_lat>=? AND r.min_lat<=?'''
         from engine import geo_dist
         elems=[]
+        seen_pois=set()
         with sqlite3.connect(f'file:{path}?mode=ro',uri=True,timeout=10) as db:
             for ref,pla,plo,shop,amen,high,rail,pt,brand,name,operator,kind in db.execute(sql, (lon-dlon,lon+dlon,lat-dlat,lat+dlat)):
                 if geo_dist(lat,lon,pla,plo)>(RADIUS_ROAD if kind=='road' else RADIUS_POI):continue
+                if kind != 'road':
+                    if ref in seen_pois: continue
+                    seen_pois.add(ref)
                 tags={k:v for k,v in (
                     ('shop',shop),('amenity',amen),('highway',high),('railway',rail),
                     ('public_transport',pt),('brand',brand),('name',name),('operator',operator)) if v}

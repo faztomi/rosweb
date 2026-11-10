@@ -49,7 +49,7 @@ def _read_upload(filename:str, contents:bytes):
 
 
 with st.container(border=True):
-    st.markdown('**1. Red de sucursales (opcional)**')
+    st.markdown('**1. Subí las sucursales de tu negocio (opcional)**')
     upload = st.file_uploader('Archivo CSV o Excel', type=['csv', 'xlsx', 'xlsm'],
                                label_visibility='collapsed')
     if upload is not None:

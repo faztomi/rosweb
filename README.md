@@ -48,3 +48,25 @@ python test_presentation_smoke.py
 ```
 
 Son pruebas locales con datos simulados en los apartados de servicios. **No prueban la conexión real de Streamlit Cloud**. Para certificar la publicación hay que ejecutar el proceso de mapas y evaluar al menos una dirección real con y sin red.
+
+
+## Estado de datos: comprobación obligatoria de publicación
+
+El ZIP incluye `data/censo_pba_2022.geojson.gz`, 23.882 radios y 17.408.906 habitantes en viviendas particulares.
+Si no se sube esta carpeta a la **raíz** del repositorio, la app no podrá calcular demanda en PBA.
+
+GitHub Actions **Preparar datos cartográficos ROS** debe terminar verde y publicar
+`data/osm_snapshot_manifest.json` **y** todas las partes `data/osm_part_*.bin`.
+Estas partes contienen los datos de OpenStreetMap; NO están en el ZIP porque se generan
+a partir de extractos oficiales después de subir el código.
+
+Para comprobar los datos tras publicar, abrí `https://rosweb.streamlit.app/?diagnostico=1`
+y buscá: Censo PBA: disponible; Base OSM: disponible. Este panel es técnico y
+no se presenta en la interfaz normal. Si cualquiera marca no cargado, falta
+publicar datos; no se arregla reintentando la dirección.
+
+### Pruebas hechas antes de entregar
+- `python scripts/check_census_pba.py` usa población REAL de dos puntos PBA.
+- `python -m pytest -q` prueba geocodificación simulada y scoring completo.
+- La descarga y procesamiento OSM en GitHub NO se comprueban desde este contenedor;
+  solo se pueden verificar en el flujo de acciones del repositorio.

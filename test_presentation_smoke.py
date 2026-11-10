@@ -49,7 +49,8 @@ def test_full_render():
     fake.extend([{'type':'node','tags':{'highway':'bus_stop'}} for _ in range(6)])
     fake.extend([{'type':'way','tags':{'highway':'residential'}} for _ in range(20)])
     with patch.object(services,'geocode',return_value=point),patch.object(osm_snapshot,'local_osm',return_value=(fake,'OSM de prueba')):
-        import app
+        import app,importlib
+        importlib.reload(app)
         assert any('Resultado de ubicación' in s for s in st.shown)
         assert any('Desglose' in s for s in st.shown)
         assert not any('Evaluación no disponible' in s for s in st.shown)
