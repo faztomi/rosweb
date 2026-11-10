@@ -1,0 +1,54 @@
+name: Actualizar mapa OSM de Buenos Aires
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/build_osm_snapshot.py'
+      - 'scripts/build_caba_snapshot.py'
+      - '.github/workflows/update-maps.yml'
+  schedule:
+    - cron: '20 8 1 * *'
+permissions:
+  contents: write
+concurrency:
+  group: ros-osm
+  cancel-in-progress: false
+jobs:
+  prepare-osm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar dependencias
+        run: python -m pip install 'osmium>=4,<6' 'requests>=2.31,<3' 'shapely>=2,<3' 'numpy>=1.26,<3' 'pyproj>=3.5,<4'
+      - name: Verificar Censo de Provincia
+        run: python scripts/check_census_pba.py
+      - name: Generar base OSM local con extracto BBBike Buenos Aires
+        run: python scripts/build_osm_snapshot.py
+      - name: Generar Censo CABA por radios (si el servicio responde)
+        continue-on-error: true
+        run: python scripts/build_caba_snapshot.py
+      - name: Controlar datos producidos
+        run: |
+          ROS_ALLOW_BOOTSTRAP=0 python - <<'PY'
+          from osm_snapshot import local_osm,database_path,snapshot_metadata
+          assert database_path(), 'No hay SQLite OSM'
+          assert int(snapshot_metadata()['features']) >= 10000
+          for p in [(-34.60,-58.40),(-34.76,-58.40)]:
+              items,_=local_osm(*p)
+              assert items is not None and len(items)>=4, (p,len(items or []))
+              print('Mapa OK',p,len(items))
+          PY
+      - name: Publicar datos procesados en repositorio
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A data/
+          if ! git diff --cached --quiet; then
+            git commit -m 'Actualizar base OSM verificada y Censo CABA'
+            git push origin HEAD:main
+          fi
