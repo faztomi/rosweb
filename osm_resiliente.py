@@ -93,6 +93,25 @@ def _jurisdiction_ok(candidate, wanted):
     return strip_prefix(cand) == strip_prefix(exp)
 
 
+def _expected_place_matches(a, *place_values):
+    """Never geocode a different town or district than explicitly requested.
+
+    Example: Ioria 355, Lomas de Zamora must NOT resolve to Loria 355, Glew.
+    False negatives can be resolved later; wrong locations would corrupt the score.
+    """
+    expected = normalize(a.get('locality'))
+    municipality = normalize(a.get('municipality'))
+    values = [normalize(v) for v in place_values if v]
+    combined = ' '.join(values)
+    # If user named a locality, the result must identify it directly or through
+    # its explicit municipality. A generic province ('Buenos Aires') is not enough.
+    if expected and not any(expected == v or (' ' + expected + ' ') in (' ' + v + ' ') for v in values):
+        return False
+    if municipality and not any(municipality == v or (' ' + municipality + ' ') in (' ' + v + ' ') for v in values):
+        return False
+    return True
+
+
 def _from_georef(item, a, case):
     point = item.get('ubicacion') or {}
     lat, lon = point.get('lat'), point.get('lon')
@@ -120,7 +139,14 @@ def _from_georef(item, a, case):
         return None
     if a['province'] and province and not _jurisdiction_ok(province, a['province']):
         return None
-    loc = (item.get('localidad_censal') or item.get('localidad') or {}).get('nombre') or a['locality']
+    loc = (item.get('localidad_censal') or item.get('localidad') or {}).get('nombre') or ''
+    # Do not fill a missing returned locality with the user input before validation.
+    # Georef sometimes returns a different locality with an otherwise valid address.
+    if not _expected_place_matches(a, loc, dept, item.get('nomenclatura'),
+                                  (item.get('localidad') or {}).get('nombre'),
+                                  (item.get('localidad_censal') or {}).get('nombre')):
+        return None
+    loc = loc or a['locality']
     return {
         'lat':str(lat), 'lon':str(lon),
         'display_name':item.get('nomenclatura') or f"{a['raw']}, {loc}, {dept}, {province}",
@@ -154,6 +180,9 @@ def _from_nominatim(item, a, case):
         if not any((('buenos aires' in place) if normalize(v) in ('caba','capital federal','ciudad autonoma de buenos aires') else normalize(v) in place)
                    for v in (a['locality'],a['municipality']) if v):
             return None
+    if not _expected_place_matches(a, *[addr.get(k,'') for k in
+          ('suburb','neighbourhood','town','city','county','municipality','city_district')]):
+        return None
     return dict(item, origin='OpenStreetMap Nominatim · número verificado')
 
 
@@ -178,6 +207,9 @@ def _from_photon(feature, a, case):
         if not any((('buenos aires' in place) if normalize(v) in ('caba','capital federal','ciudad autonoma de buenos aires') else normalize(v) in place)
                    for v in (a['locality'],a['municipality']) if v):
             return None
+    if not _expected_place_matches(a, *[prop.get(k,'') for k in
+          ('city','district','county','state')]):
+        return None
     return {'lat':str(coord[1]),'lon':str(coord[0]),
             'display_name':', '.join(filter(None,[f"{street} {a['number']}", prop.get('city'),prop.get('state')])),
             'address':{'road':street,'house_number':str(a['number']),

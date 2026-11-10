@@ -1,0 +1,19 @@
+PARCHE DE SEGURIDAD PARA LA GEOCODIFICACIÓN V37 (NO ES UNA SOLUCIÓN DEL SERVIDOR OSM)
+
+Problema confirmado: el buscador podía devolver una dirección con calle/altura similar
+pero localidad diferente, por ejemplo Ioria 355, Lomas de Zamora -> Loria 355, Glew.
+
+Corrección comprobada localmente: ahora Georef, Nominatim y Photon verifican la
+localidad ingresada. Se eliminó el fallback original V37 que aceptaba el primer
+resultado de Nominatim sin contrastar localidad ni número.
+
+Pruebas: python -m unittest test_jurisdiccion.py (8 pruebas).
+
+ESTO NO REPARA LOS TIMEOUTS DE OVERPASS EN STREAMLIT CLOUD.
+La consulta a Overpass sigue siendo la original V37 y depende de servidores
+públicos que pueden rechazar conexiones desde un alojamiento compartido.
+No publicar como app profesional hasta que la extracción OSM tenga una fuente
+estable y se haya comprobado con una evaluación end-to-end en el propio host.
+
+Los datos censales incluidos aquí son los de la antigua V37 a escala
+municipal/barrio. No son los radios censales detallados del ROS 2.0.

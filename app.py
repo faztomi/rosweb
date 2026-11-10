@@ -61,8 +61,10 @@ def localizar(direccion):
     candidato=locate(direccion, user_agent='ROS-Expansion-V37/1.0 (evaluador comercial; https://rosweb.streamlit.app)')
     if candidato is not None:
         return candidato
-    # Se conserva además la consulta Nominatim de la app V37.
-    return v37.geocode_address(direccion, max_retries=1)
+    # V37's old fallback returned the first Nominatim hit without validating
+    # locality or house number. That silently routed Lomas de Zamora to Glew.
+    # Never use unchecked geocoder results in production.
+    return None
 
 
 def mostrar_resultado(direccion, archivo, formato):
