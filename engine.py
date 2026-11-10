@@ -89,7 +89,7 @@ def population_at(lat,lon,radii=(400,800,1200)):
             area+=a
         totals[radius]=round(tot)
         area_covered[radius]=min(1,area/circle.area)
-    if area_covered[800]<0.4:return None
+    if area_covered[800]<0.90:return None
     totals['coverage_800']=round(area_covered[800]*100)
     totals['density_800']=round(totals[800]/(math.pi*.8**2))
     return totals
@@ -168,17 +168,75 @@ def own_network_summary(lat,lon,branches):
             'lista_cercanas':verified[:5]}
 
 
-def compute_result(lat,lon, osm=None, branches=None, own_brand=''):
-    pop=population_at(lat,lon)
-    scores={k:None for k in WEIGHTS}
-    if pop:scores['Demanda residencial']=demand_score(pop)
-    raw={}
-    nearby=own_network_summary(lat,lon,branches or [])
-    if osm is not None:
-        classes=poi_classify(osm,own_brand=own_brand)
-        osm_sc,raw=osm_scores(classes,population=pop,branch_nearby=nearby['proximas_1500'])
-        scores.update(osm_sc)
-    available=sum(WEIGHTS[k] for k,v in scores.items() if v is not None)
-    total=round(sum(scores[k]*WEIGHTS[k] for k in scores if scores[k] is not None)/available,1) if available else None
-    status='Completo (heurístico)' if available==100 else 'Parcial (fuentes faltantes)'
-    return {'scores':scores,'score':total,'coverage':available,'status':status,'poblacion':pop,'osm':raw,'red':nearby}
+def compute_result(lat, lon, osm=None, branches=None, own_brand='', network_quality=None):
+    """Return a publishable score ONLY when evidence for all 5 dimensions is adequate.
+
+    Missing services, insufficient coverage, low-confidence geocoding, incomplete
+    branch networks and cartographic samples NEVER become zero-valued features.
+    In these circumstances score=None and no numeric result is shown publicly.
+    """
+    pop = population_at(lat, lon)
+    scores = {k: None for k in WEIGHTS}
+    issues = []
+    if pop is None:
+        issues.append('population')
+    else:
+        scores['Demanda residencial'] = demand_score(pop)
+
+    branches = branches or []
+    valid_rows = []
+    for row in branches:
+        try:
+            a, b = float(row.get('Latitud')), float(row.get('Longitud'))
+            if -56 < a < -20 and -74 < b < -53:
+                valid_rows.append(row)
+        except (ValueError, TypeError, KeyError):
+            pass
+    network_coverage = len(valid_rows) / len(branches) if branches else 0.0
+    if network_quality is not None:
+        network_coverage = min(network_coverage, float(network_quality))
+    if network_coverage < .80:
+        issues.append('network')
+    nearby = own_network_summary(lat, lon, valid_rows)
+
+    raw = {}
+    if osm is None:
+        issues.append('osm')
+    else:
+        classes = poi_classify(osm, own_brand=own_brand)
+        raw = {
+            'comercios':len(classes['commercial']),
+            'servicios':len(classes['amenities']),
+            'transporte':len(classes['transport']),
+            'vias':len(classes['roads']),
+            'supermercados_competidores':len(classes['competitors']),
+        }
+        # Small cartographic samples (e.g. 2 shops in central Balvanera) cannot
+        # substantiate a low score. A full OSM retrieval alone is NOT proof of
+        # completeness. A sparse record set in a dense census area is downgraded.
+        if (len(classes['commercial']) + len(classes['amenities']) + len(classes['transport']) < 8
+            or len(classes['roads']) < 4
+            or (pop is not None and pop[800] >= 5000 and len(classes['commercial']) < 5)):
+            issues.append('osm_sparse')
+        else:
+            osm_sc, _ = osm_scores(classes, population=pop,
+                                   branch_nearby=nearby['proximas_1500'])
+            scores.update(osm_sc)
+    if scores.get('Equilibrio de competencia') is None and 'population' not in issues:
+        issues.append('competition')
+
+    complete = all(v is not None for v in scores.values()) and not issues
+    score = (round(sum(scores[k] * WEIGHTS[k] for k in WEIGHTS) / 100, 1)
+             if complete else None)
+    return {
+        'score':score,
+        'ready':complete,
+        'scores':scores if complete else {k:None for k in WEIGHTS},
+        'coverage':100 if complete else 0,
+        'status':'Evaluación disponible' if complete else 'Evaluación no disponible',
+        'issues':sorted(set(issues)),
+        'poblacion':pop,
+        'osm':raw,
+        'red':nearby,
+        'network_coverage':round(network_coverage*100),
+    }

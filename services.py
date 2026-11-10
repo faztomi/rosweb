@@ -15,26 +15,41 @@ HEADERS={'User-Agent':'ROS-Simple-Web/1.0 (geographic scoring tool, public pilot
 GEOREF='https://apis.datos.gob.ar/georef/api/direcciones'
 PHOTON='https://photon.komoot.io/api/'
 NOMINATIM='https://nominatim.openstreetmap.org/search'
-OVERPASS=['https://overpass.kumi.systems/api/interpreter',
+OVERPASS=['https://overpass.private.coffee/api/interpreter',
           'https://overpass-api.de/api/interpreter']
 
 
 def db():
-    conn=sqlite3.connect(STORE,timeout=8)
+    conn=sqlite3.connect(STORE,timeout=3)
     conn.execute('CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL, timestamp REAL NOT NULL)')
     return conn
 
 
 def cache_read(key, max_age=None):
-    with db() as c:
-        r=c.execute('SELECT value,timestamp FROM kv WHERE key=?',(key,)).fetchone()
-    if not r or (max_age and time.time()-r[1]>max_age):return None
-    try:return json.loads(r[0])
-    except Exception:return None
+    # Cache outages must never become visitor-facing exceptions.
+    conn=None
+    try:
+        conn=db()
+        row=conn.execute('SELECT value,timestamp FROM kv WHERE key=?',(key,)).fetchone()
+        if not row or (max_age and time.time()-row[1]>max_age):return None
+        return json.loads(row[0])
+    except (sqlite3.Error,ValueError,TypeError):
+        return None
+    finally:
+        if conn is not None:conn.close()
 
 
 def cache_write(key,value):
-    with db() as c:c.execute('INSERT OR REPLACE INTO kv VALUES (?,?,?)',(key,json.dumps(value,ensure_ascii=False),time.time()))
+    conn=None
+    try:
+        conn=db()
+        conn.execute('INSERT OR REPLACE INTO kv VALUES (?,?,?)',
+                     (key,json.dumps(value,ensure_ascii=False),time.time()))
+        conn.commit()
+    except (sqlite3.Error,ValueError,TypeError):
+        pass
+    finally:
+        if conn is not None:conn.close()
 
 
 def valid_latlon(lat,lon):
@@ -259,37 +274,44 @@ def geocode_network_georef(df):
             if valid_latlon(loc.get('lat'),loc.get('lon')):
                 cand={'label':opts[0].get('nomenclatura') or '', 'lat':loc['lat'], 'lon':loc['lon']}
                 rating,_=_quality(str(out.loc[i]['Dirección']),cand)
-                if rating < 1 or not _district_match(str(out.loc[i]['Dirección']),cand):continue
+                if rating < 4 or not _district_match(str(out.loc[i]['Dirección']),cand):continue
                 out.at[i,'Latitud']=str(loc['lat']);out.at[i,'Longitud']=str(loc['lon']);found+=1
         # No aggressive client-side retry loops; failed rows are recorded as pending.
     return out,found
 
 
-def overpass_pois(lat,lon):
-    key=f'osm:v5:{round(lat,4)}:{round(lon,4)}'
-    result=cache_read(key,max_age=14*86400)
-    if result is not None:return result,'Datos de OpenStreetMap en caché (hasta 14 días)'
-    # Fast, keyless vector tiles first. This is a cartographic sample, whose
-    # POI completeness may be lower than a full OSM query.
-    try:
-        from tiles import read_tiles
-        elements=read_tiles(lat,lon)
-        if elements:
-            cache_write(key,elements)
-            return elements,'OpenFreeMap / OpenMapTiles (muestra cartográfica OSM)'
-    except Exception:
-        pass
-    query=f'''[out:json][timeout:12];(\n nwr(around:650,{lat:.6f},{lon:.6f})["shop"~"^(supermarket|convenience|bakery|butcher|greengrocer|chemist|clothes|shoes|variety_store|mall|kiosk|department_store|hardware|florist|beverages|books|electronics)$"];\n nwr(around:650,{lat:.6f},{lon:.6f})["amenity"~"^(school|kindergarten|hospital|clinic|doctors|pharmacy|bank|atm|university|post_office|marketplace)$"];\n nwr(around:700,{lat:.6f},{lon:.6f})["highway"="bus_stop"];\n nwr(around:700,{lat:.6f},{lon:.6f})["public_transport"];\n nwr(around:700,{lat:.6f},{lon:.6f})["railway"~"^(station|halt|tram_stop)$"];\n way(around:450,{lat:.6f},{lon:.6f})["highway"~"^(primary|secondary|tertiary|residential|pedestrian|footway)$"];\n);out center qt;'''
-    # A short, bounded query is attempted once at each of two public services.
+def overpass_pois(lat, lon):
+    """Full OSM features from an actual Overpass response. NEVER use map tiles
+    as a proxy for exhaustive business coverage; don't cache failures or partial
+    cartographic samples as complete census data.
+    """
+    key = f'osm_complete:v7:{round(lat,4)}:{round(lon,4)}'
+    cached = cache_read(key, max_age=7*86400)
+    if isinstance(cached, list) and cached:
+        return cached, 'OpenStreetMap (consulta almacenada, hasta 7 días)'
+    query = f'''[out:json][timeout:20];(
+      nwr(around:700,{lat:.6f},{lon:.6f})["shop"];
+      nwr(around:700,{lat:.6f},{lon:.6f})["amenity"~"^(school|kindergarten|hospital|clinic|doctors|pharmacy|bank|atm|university|college|post_office|marketplace)$"];
+      nwr(around:700,{lat:.6f},{lon:.6f})["highway"="bus_stop"];
+      nwr(around:700,{lat:.6f},{lon:.6f})["public_transport"];
+      nwr(around:700,{lat:.6f},{lon:.6f})["railway"~"^(station|halt|tram_stop)$"];
+      way(around:450,{lat:.6f},{lon:.6f})["highway"~"^(primary|secondary|tertiary|residential|pedestrian|footway)$"];
+    );out tags center qt;'''
     for endpoint in OVERPASS:
         try:
-            r=requests.post(endpoint,data={'data':query},headers=HEADERS,timeout=9)
-            r.raise_for_status()
-            data=r.json()
-            if isinstance(data.get('elements'),list):
-                # Avoid storing geometries and huge data in cache.
-                elements=[{'id':e.get('id'),'type':e.get('type'),'tags':e.get('tags',{})} for e in data['elements'][:8000]]
-                cache_write(key,elements)
-                return elements,'OpenStreetMap / Overpass'
-        except (requests.RequestException,KeyError,ValueError):continue
-    return None,'Overpass no respondió; no se atribuyen valores a sus indicadores'
+            response = requests.post(endpoint, data={'data':query}, headers=HEADERS,
+                                     timeout=(5,24))
+            response.raise_for_status()
+            payload=response.json()
+            if not isinstance(payload.get('elements'),list) or payload.get('remark'):
+                continue
+            # A zero-element dataset isn't a proven complete commercial census.
+            data=[{'id':i.get('id'),'type':i.get('type'),
+                   'tags':i.get('tags') or {}} for i in payload['elements']]
+            if not data:
+                continue
+            cache_write(key, data)
+            return data, 'OpenStreetMap (consulta geográfica completa)'
+        except (requests.RequestException,ValueError,KeyError,TypeError):
+            continue
+    return None, 'Servicio geográfico no disponible'
