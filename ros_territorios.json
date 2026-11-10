@@ -1,0 +1,1395 @@
+{
+  "nombre": "ROS territorial — base original",
+  "fuente": "ROS integrado con facturación, simulador y ranking.xlsm",
+  "fuente_sha256": "f1c177f8bedfb1e55ee0c42069a35e0d2dee7ec3a8f2f8e2705450a49a9bb56f",
+  "ambitos": {
+    "CABA": 48,
+    "PBA": 33
+  },
+  "pesos": {
+    "Población": 0.175,
+    "Densidad poblacional": 0.175,
+    "Densidad comercial": 0.275,
+    "Cupo disponible": 0.375
+  },
+  "unidad_densidad_comercial": "viajes/km²/día hábil (definición del Excel original)",
+  "zonas": [
+    {
+      "nombre": "Agronomía",
+      "ambito": "CABA",
+      "poblacion": 13963,
+      "densidad_poblacional": 6694.0,
+      "densidad_comercial": 8568.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 4,
+      "componentes": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "ros_original": 1.0,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Almagro",
+      "ambito": "CABA",
+      "poblacion": 128206,
+      "densidad_poblacional": 31270.0,
+      "densidad_comercial": 56161.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 40,
+      "componentes": [
+        4,
+        4,
+        4,
+        1
+      ],
+      "ros_original": 2.875,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "Balvanera",
+      "ambito": "CABA",
+      "poblacion": 137521,
+      "densidad_poblacional": 31254.0,
+      "densidad_comercial": 60633.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 43,
+      "componentes": [
+        4,
+        4,
+        4,
+        1
+      ],
+      "ros_original": 2.875,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "Barracas",
+      "ambito": "CABA",
+      "poblacion": 73377,
+      "densidad_poblacional": 9655.0,
+      "densidad_comercial": 15487.0,
+      "cupo_disponible": 10,
+      "cupo_objetivo": 23,
+      "componentes": [
+        3,
+        1,
+        2,
+        4
+      ],
+      "ros_original": 2.75,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "Belgrano",
+      "ambito": "CABA",
+      "poblacion": 126267,
+      "densidad_poblacional": 17235.0,
+      "densidad_comercial": 31161.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 39,
+      "componentes": [
+        4,
+        2,
+        3,
+        1
+      ],
+      "ros_original": 2.25,
+      "clasificacion_original": "Regular"
+    },
+    {
+      "nombre": "La Boca",
+      "ambito": "CABA",
+      "poblacion": 45113,
+      "densidad_poblacional": 11036.0,
+      "densidad_comercial": 16377.0,
+      "cupo_disponible": 3,
+      "cupo_objetivo": 14,
+      "componentes": [
+        2,
+        1,
+        2,
+        3
+      ],
+      "ros_original": 2.2,
+      "clasificacion_original": "Regular"
+    },
+    {
+      "nombre": "Boedo",
+      "ambito": "CABA",
+      "poblacion": 47306,
+      "densidad_poblacional": 28918.0,
+      "densidad_comercial": 47079.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 14,
+      "componentes": [
+        2,
+        4,
+        4,
+        1
+      ],
+      "ros_original": 2.525,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "Caballito",
+      "ambito": "CABA",
+      "poblacion": 176076,
+      "densidad_poblacional": 27135.0,
+      "densidad_comercial": 50037.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 55,
+      "componentes": [
+        4,
+        4,
+        4,
+        1
+      ],
+      "ros_original": 2.875,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "Chacarita",
+      "ambito": "CABA",
+      "poblacion": 27761,
+      "densidad_poblacional": 13605.0,
+      "densidad_comercial": 22475.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 8,
+      "componentes": [
+        1,
+        2,
+        2,
+        1
+      ],
+      "ros_original": 1.45,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Coghlan",
+      "ambito": "CABA",
+      "poblacion": 18604,
+      "densidad_poblacional": 13836.0,
+      "densidad_comercial": 18540.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 5,
+      "componentes": [
+        1,
+        2,
+        2,
+        1
+      ],
+      "ros_original": 1.45,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Colegiales",
+      "ambito": "CABA",
+      "poblacion": 52551,
+      "densidad_poblacional": 17235.0,
+      "densidad_comercial": 27852.0,
+      "cupo_disponible": 2,
+      "cupo_objetivo": 16,
+      "componentes": [
+        2,
+        2,
+        3,
+        3
+      ],
+      "ros_original": 2.65,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "Constitución",
+      "ambito": "CABA",
+      "poblacion": 44107,
+      "densidad_poblacional": 12488.0,
+      "densidad_comercial": 23328.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 13,
+      "componentes": [
+        2,
+        2,
+        2,
+        1
+      ],
+      "ros_original": 1.625,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Flores",
+      "ambito": "CABA",
+      "poblacion": 164310,
+      "densidad_poblacional": 19091.0,
+      "densidad_comercial": 34746.0,
+      "cupo_disponible": 8,
+      "cupo_objetivo": 51,
+      "componentes": [
+        4,
+        3,
+        3,
+        4
+      ],
+      "ros_original": 3.55,
+      "clasificacion_original": "Muy bueno"
+    },
+    {
+      "nombre": "Floresta",
+      "ambito": "CABA",
+      "poblacion": 37575,
+      "densidad_poblacional": 13800.0,
+      "densidad_comercial": 21473.0,
+      "cupo_disponible": 1,
+      "cupo_objetivo": 11,
+      "componentes": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "ros_original": 2.0,
+      "clasificacion_original": "Regular"
+    },
+    {
+      "nombre": "Liniers",
+      "ambito": "CABA",
+      "poblacion": 44132,
+      "densidad_poblacional": 10446.0,
+      "densidad_comercial": 17884.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 13,
+      "componentes": [
+        2,
+        1,
+        2,
+        1
+      ],
+      "ros_original": 1.45,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Mataderos",
+      "ambito": "CABA",
+      "poblacion": 64436,
+      "densidad_poblacional": 10446.0,
+      "densidad_comercial": 16129.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 20,
+      "componentes": [
+        3,
+        1,
+        2,
+        1
+      ],
+      "ros_original": 1.625,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Monserrat",
+      "ambito": "CABA",
+      "poblacion": 39914,
+      "densidad_poblacional": 12488.0,
+      "densidad_comercial": 24077.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 12,
+      "componentes": [
+        2,
+        2,
+        2,
+        1
+      ],
+      "ros_original": 1.625,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Monte Castro",
+      "ambito": "CABA",
+      "poblacion": 33623,
+      "densidad_poblacional": 13800.0,
+      "densidad_comercial": 19154.0,
+      "cupo_disponible": 2,
+      "cupo_objetivo": 10,
+      "componentes": [
+        2,
+        2,
+        2,
+        3
+      ],
+      "ros_original": 2.375,
+      "clasificacion_original": "Regular"
+    },
+    {
+      "nombre": "Nueva Pompeya",
+      "ambito": "CABA",
+      "poblacion": 42695,
+      "densidad_poblacional": 11036.0,
+      "densidad_comercial": 16245.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 13,
+      "componentes": [
+        2,
+        1,
+        2,
+        1
+      ],
+      "ros_original": 1.45,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Núñez",
+      "ambito": "CABA",
+      "poblacion": 51949,
+      "densidad_poblacional": 17235.0,
+      "densidad_comercial": 28679.0,
+      "cupo_disponible": 1,
+      "cupo_objetivo": 16,
+      "componentes": [
+        2,
+        2,
+        3,
+        2
+      ],
+      "ros_original": 2.275,
+      "clasificacion_original": "Regular"
+    },
+    {
+      "nombre": "Palermo",
+      "ambito": "CABA",
+      "poblacion": 226534,
+      "densidad_poblacional": 15403.0,
+      "densidad_comercial": 29512.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 71,
+      "componentes": [
+        4,
+        2,
+        3,
+        1
+      ],
+      "ros_original": 2.25,
+      "clasificacion_original": "Regular"
+    },
+    {
+      "nombre": "Parque Avellaneda",
+      "ambito": "CABA",
+      "poblacion": 53229,
+      "densidad_poblacional": 10446.0,
+      "densidad_comercial": 14875.0,
+      "cupo_disponible": 8,
+      "cupo_objetivo": 16,
+      "componentes": [
+        2,
+        1,
+        1,
+        4
+      ],
+      "ros_original": 2.3,
+      "clasificacion_original": "Regular"
+    },
+    {
+      "nombre": "Parque Chacabuco",
+      "ambito": "CABA",
+      "poblacion": 56281,
+      "densidad_poblacional": 19091.0,
+      "densidad_comercial": 29247.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 17,
+      "componentes": [
+        2,
+        3,
+        3,
+        1
+      ],
+      "ros_original": 2.075,
+      "clasificacion_original": "Regular"
+    },
+    {
+      "nombre": "Parque Chas",
+      "ambito": "CABA",
+      "poblacion": 17489,
+      "densidad_poblacional": 13605.0,
+      "densidad_comercial": 18557.0,
+      "cupo_disponible": 3,
+      "cupo_objetivo": 5,
+      "componentes": [
+        1,
+        2,
+        2,
+        3
+      ],
+      "ros_original": 2.2,
+      "clasificacion_original": "Regular"
+    },
+    {
+      "nombre": "Parque Patricios",
+      "ambito": "CABA",
+      "poblacion": 40985,
+      "densidad_poblacional": 11036.0,
+      "densidad_comercial": 17569.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 12,
+      "componentes": [
+        2,
+        1,
+        2,
+        1
+      ],
+      "ros_original": 1.45,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Paternal",
+      "ambito": "CABA",
+      "poblacion": 19717,
+      "densidad_poblacional": 13605.0,
+      "densidad_comercial": 19700.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 6,
+      "componentes": [
+        1,
+        2,
+        2,
+        1
+      ],
+      "ros_original": 1.45,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Puerto Madero",
+      "ambito": "CABA",
+      "poblacion": 6726,
+      "densidad_poblacional": 12488.0,
+      "densidad_comercial": 21979.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 2,
+      "componentes": [
+        1,
+        2,
+        2,
+        1
+      ],
+      "ros_original": 1.45,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Recoleta",
+      "ambito": "CABA",
+      "poblacion": 157932,
+      "densidad_poblacional": 27908.0,
+      "densidad_comercial": 52802.0,
+      "cupo_disponible": 6,
+      "cupo_objetivo": 49,
+      "componentes": [
+        4,
+        4,
+        4,
+        4
+      ],
+      "ros_original": 4.0,
+      "clasificacion_original": "Muy bueno"
+    },
+    {
+      "nombre": "Retiro",
+      "ambito": "CABA",
+      "poblacion": 65413,
+      "densidad_poblacional": 12488.0,
+      "densidad_comercial": 24676.0,
+      "cupo_disponible": 1,
+      "cupo_objetivo": 20,
+      "componentes": [
+        3,
+        2,
+        2,
+        2
+      ],
+      "ros_original": 2.175,
+      "clasificacion_original": "Regular"
+    },
+    {
+      "nombre": "Saavedra",
+      "ambito": "CABA",
+      "poblacion": 50295,
+      "densidad_poblacional": 13836.0,
+      "densidad_comercial": 21695.0,
+      "cupo_disponible": 3,
+      "cupo_objetivo": 15,
+      "componentes": [
+        2,
+        2,
+        2,
+        3
+      ],
+      "ros_original": 2.375,
+      "clasificacion_original": "Regular"
+    },
+    {
+      "nombre": "San Cristóbal",
+      "ambito": "CABA",
+      "poblacion": 48611,
+      "densidad_poblacional": 31131.0,
+      "densidad_comercial": 55164.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 15,
+      "componentes": [
+        2,
+        4,
+        4,
+        1
+      ],
+      "ros_original": 2.525,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "San Nicolás",
+      "ambito": "CABA",
+      "poblacion": 29273,
+      "densidad_poblacional": 12488.0,
+      "densidad_comercial": 24976.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 9,
+      "componentes": [
+        1,
+        2,
+        2,
+        1
+      ],
+      "ros_original": 1.45,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "San Telmo",
+      "ambito": "CABA",
+      "poblacion": 20453,
+      "densidad_poblacional": 12488.0,
+      "densidad_comercial": 21679.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 6,
+      "componentes": [
+        1,
+        2,
+        2,
+        1
+      ],
+      "ros_original": 1.45,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Vélez Sarsfield",
+      "ambito": "CABA",
+      "poblacion": 35081,
+      "densidad_poblacional": 13800.0,
+      "densidad_comercial": 18989.0,
+      "cupo_disponible": 8,
+      "cupo_objetivo": 11,
+      "componentes": [
+        2,
+        2,
+        2,
+        4
+      ],
+      "ros_original": 2.75,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "Versalles",
+      "ambito": "CABA",
+      "poblacion": 13822,
+      "densidad_poblacional": 13800.0,
+      "densidad_comercial": 17995.0,
+      "cupo_disponible": 1,
+      "cupo_objetivo": 4,
+      "componentes": [
+        1,
+        2,
+        2,
+        2
+      ],
+      "ros_original": 1.825,
+      "clasificacion_original": "Regular"
+    },
+    {
+      "nombre": "Villa Crespo",
+      "ambito": "CABA",
+      "poblacion": 81959,
+      "densidad_poblacional": 13605.0,
+      "densidad_comercial": 23782.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 25,
+      "componentes": [
+        3,
+        2,
+        2,
+        1
+      ],
+      "ros_original": 1.7999999999999998,
+      "clasificacion_original": "Regular"
+    },
+    {
+      "nombre": "Villa del Parque",
+      "ambito": "CABA",
+      "poblacion": 55273,
+      "densidad_poblacional": 14231.0,
+      "densidad_comercial": 21460.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 17,
+      "componentes": [
+        2,
+        2,
+        2,
+        1
+      ],
+      "ros_original": 1.625,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Villa Devoto",
+      "ambito": "CABA",
+      "poblacion": 66521,
+      "densidad_poblacional": 14231.0,
+      "densidad_comercial": 21631.0,
+      "cupo_disponible": 4,
+      "cupo_objetivo": 20,
+      "componentes": [
+        3,
+        2,
+        2,
+        4
+      ],
+      "ros_original": 2.925,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "Villa General Mitre",
+      "ambito": "CABA",
+      "poblacion": 34204,
+      "densidad_poblacional": 15547.0,
+      "densidad_comercial": 21952.0,
+      "cupo_disponible": 3,
+      "cupo_objetivo": 10,
+      "componentes": [
+        2,
+        2,
+        2,
+        3
+      ],
+      "ros_original": 2.375,
+      "clasificacion_original": "Regular"
+    },
+    {
+      "nombre": "Villa Lugano",
+      "ambito": "CABA",
+      "poblacion": 108170,
+      "densidad_poblacional": 12019.0,
+      "densidad_comercial": 17980.0,
+      "cupo_disponible": 15,
+      "cupo_objetivo": 34,
+      "componentes": [
+        4,
+        2,
+        2,
+        4
+      ],
+      "ros_original": 3.0999999999999996,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "Villa Luro",
+      "ambito": "CABA",
+      "poblacion": 32502,
+      "densidad_poblacional": 13800.0,
+      "densidad_comercial": 20148.0,
+      "cupo_disponible": 1,
+      "cupo_objetivo": 10,
+      "componentes": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "ros_original": 2.0,
+      "clasificacion_original": "Regular"
+    },
+    {
+      "nombre": "Villa Ortúzar",
+      "ambito": "CABA",
+      "poblacion": 21736,
+      "densidad_poblacional": 13605.0,
+      "densidad_comercial": 19537.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 6,
+      "componentes": [
+        1,
+        2,
+        2,
+        1
+      ],
+      "ros_original": 1.45,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Villa Pueyrredón",
+      "ambito": "CABA",
+      "poblacion": 39654,
+      "densidad_poblacional": 13836.0,
+      "densidad_comercial": 19370.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 12,
+      "componentes": [
+        2,
+        2,
+        2,
+        1
+      ],
+      "ros_original": 1.625,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Villa Real",
+      "ambito": "CABA",
+      "poblacion": 13854,
+      "densidad_poblacional": 10503.0,
+      "densidad_comercial": 12688.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 4,
+      "componentes": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "ros_original": 1.0,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Villa Riachuelo",
+      "ambito": "CABA",
+      "poblacion": 14084,
+      "densidad_poblacional": 9336.0,
+      "densidad_comercial": 11502.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 4,
+      "componentes": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "ros_original": 1.0,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Villa Santa Rita",
+      "ambito": "CABA",
+      "poblacion": 33325,
+      "densidad_poblacional": 14231.0,
+      "densidad_comercial": 19240.0,
+      "cupo_disponible": 2,
+      "cupo_objetivo": 10,
+      "componentes": [
+        2,
+        2,
+        2,
+        3
+      ],
+      "ros_original": 2.375,
+      "clasificacion_original": "Regular"
+    },
+    {
+      "nombre": "Villa Soldati",
+      "ambito": "CABA",
+      "poblacion": 39477,
+      "densidad_poblacional": 4590.0,
+      "densidad_comercial": 5820.0,
+      "cupo_disponible": 9,
+      "cupo_objetivo": 12,
+      "componentes": [
+        2,
+        1,
+        1,
+        4
+      ],
+      "ros_original": 2.3,
+      "clasificacion_original": "Regular"
+    },
+    {
+      "nombre": "Villa Urquiza",
+      "ambito": "CABA",
+      "poblacion": 87469,
+      "densidad_poblacional": 15932.0,
+      "densidad_comercial": 26893.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 27,
+      "componentes": [
+        3,
+        2,
+        3,
+        1
+      ],
+      "ros_original": 2.075,
+      "clasificacion_original": "Regular"
+    },
+    {
+      "nombre": "Almirante Brown",
+      "ambito": "PBA",
+      "poblacion": 585852,
+      "densidad_poblacional": 4541.0,
+      "densidad_comercial": 5832.0,
+      "cupo_disponible": 1,
+      "cupo_objetivo": 23,
+      "componentes": [
+        4,
+        3,
+        3,
+        2
+      ],
+      "ros_original": 2.8,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "Avellaneda",
+      "ambito": "PBA",
+      "poblacion": 369917,
+      "densidad_poblacional": 6725.0,
+      "densidad_comercial": 8883.0,
+      "cupo_disponible": 3,
+      "cupo_objetivo": 14,
+      "componentes": [
+        3,
+        4,
+        4,
+        3
+      ],
+      "ros_original": 3.45,
+      "clasificacion_original": "Muy bueno"
+    },
+    {
+      "nombre": "Berazategui",
+      "ambito": "PBA",
+      "poblacion": 360582,
+      "densidad_poblacional": 1632.0,
+      "densidad_comercial": 2114.0,
+      "cupo_disponible": 11,
+      "cupo_objetivo": 14,
+      "componentes": [
+        3,
+        2,
+        2,
+        4
+      ],
+      "ros_original": 2.925,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "Campana",
+      "ambito": "PBA",
+      "poblacion": 111136,
+      "densidad_poblacional": 117.0,
+      "densidad_comercial": 187.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 4,
+      "componentes": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "ros_original": 1.0,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Cañuelas",
+      "ambito": "PBA",
+      "poblacion": 70684,
+      "densidad_poblacional": 59.0,
+      "densidad_comercial": 94.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 2,
+      "componentes": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "ros_original": 1.0,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Escobar",
+      "ambito": "PBA",
+      "poblacion": 256268,
+      "densidad_poblacional": 843.0,
+      "densidad_comercial": 1315.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 10,
+      "componentes": [
+        2,
+        1,
+        1,
+        1
+      ],
+      "ros_original": 1.1749999999999998,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Esteban Echeverria",
+      "ambito": "PBA",
+      "poblacion": 339030,
+      "densidad_poblacional": 2825.0,
+      "densidad_comercial": 3289.0,
+      "cupo_disponible": 3,
+      "cupo_objetivo": 13,
+      "componentes": [
+        3,
+        2,
+        2,
+        3
+      ],
+      "ros_original": 2.55,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "Ezeiza",
+      "ambito": "PBA",
+      "poblacion": 196676,
+      "densidad_poblacional": 833.0,
+      "densidad_comercial": 792.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 7,
+      "componentes": [
+        2,
+        1,
+        1,
+        1
+      ],
+      "ros_original": 1.1749999999999998,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Florencio Varela",
+      "ambito": "PBA",
+      "poblacion": 497818,
+      "densidad_poblacional": 2620.0,
+      "densidad_comercial": 2228.0,
+      "cupo_disponible": 11,
+      "cupo_objetivo": 19,
+      "componentes": [
+        3,
+        2,
+        2,
+        4
+      ],
+      "ros_original": 2.925,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "General Rodriguez",
+      "ambito": "PBA",
+      "poblacion": 142709,
+      "densidad_poblacional": 396.0,
+      "densidad_comercial": 634.0,
+      "cupo_disponible": 2,
+      "cupo_objetivo": 5,
+      "componentes": [
+        1,
+        1,
+        1,
+        2
+      ],
+      "ros_original": 1.375,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "General San Martin",
+      "ambito": "PBA",
+      "poblacion": 450335,
+      "densidad_poblacional": 8042.0,
+      "densidad_comercial": 14123.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 18,
+      "componentes": [
+        3,
+        4,
+        4,
+        1
+      ],
+      "ros_original": 2.7,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "Hurlingham",
+      "ambito": "PBA",
+      "poblacion": 185641,
+      "densidad_poblacional": 5243.0,
+      "densidad_comercial": 6751.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 7,
+      "componentes": [
+        2,
+        3,
+        3,
+        1
+      ],
+      "ros_original": 2.075,
+      "clasificacion_original": "Regular"
+    },
+    {
+      "nombre": "Ituzaingo",
+      "ambito": "PBA",
+      "poblacion": 187824,
+      "densidad_poblacional": 4920.0,
+      "densidad_comercial": 6518.0,
+      "cupo_disponible": 4,
+      "cupo_objetivo": 7,
+      "componentes": [
+        2,
+        3,
+        3,
+        3
+      ],
+      "ros_original": 2.825,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "José C. Paz",
+      "ambito": "PBA",
+      "poblacion": 326992,
+      "densidad_poblacional": 6514.0,
+      "densidad_comercial": 6354.0,
+      "cupo_disponible": 7,
+      "cupo_objetivo": 13,
+      "componentes": [
+        3,
+        4,
+        3,
+        4
+      ],
+      "ros_original": 3.55,
+      "clasificacion_original": "Muy bueno"
+    },
+    {
+      "nombre": "La Matanza",
+      "ambito": "PBA",
+      "poblacion": 1841247,
+      "densidad_poblacional": 5653.0,
+      "densidad_comercial": 6376.0,
+      "cupo_disponible": 31,
+      "cupo_objetivo": 73,
+      "componentes": [
+        4,
+        3,
+        3,
+        4
+      ],
+      "ros_original": 3.55,
+      "clasificacion_original": "Muy bueno"
+    },
+    {
+      "nombre": "La Plata",
+      "ambito": "PBA",
+      "poblacion": 772618,
+      "densidad_poblacional": 838.0,
+      "densidad_comercial": 1425.0,
+      "cupo_disponible": 12,
+      "cupo_objetivo": 30,
+      "componentes": [
+        4,
+        1,
+        1,
+        4
+      ],
+      "ros_original": 2.65,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "Lanus",
+      "ambito": "PBA",
+      "poblacion": 461267,
+      "densidad_poblacional": 10077.0,
+      "densidad_comercial": 16962.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 18,
+      "componentes": [
+        3,
+        4,
+        4,
+        1
+      ],
+      "ros_original": 2.7,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "Lomas De Zamora",
+      "ambito": "PBA",
+      "poblacion": 690480,
+      "densidad_poblacional": 7784.0,
+      "densidad_comercial": 10650.0,
+      "cupo_disponible": 5,
+      "cupo_objetivo": 27,
+      "componentes": [
+        4,
+        4,
+        4,
+        3
+      ],
+      "ros_original": 3.625,
+      "clasificacion_original": "Muy bueno"
+    },
+    {
+      "nombre": "Malvinas Argentinas",
+      "ambito": "PBA",
+      "poblacion": 379523,
+      "densidad_poblacional": 6009.0,
+      "densidad_comercial": 6784.0,
+      "cupo_disponible": 4,
+      "cupo_objetivo": 15,
+      "componentes": [
+        3,
+        4,
+        3,
+        3
+      ],
+      "ros_original": 3.175,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "Merlo",
+      "ambito": "PBA",
+      "poblacion": 582486,
+      "densidad_poblacional": 3426.0,
+      "densidad_comercial": 4239.0,
+      "cupo_disponible": 11,
+      "cupo_objetivo": 23,
+      "componentes": [
+        4,
+        3,
+        3,
+        4
+      ],
+      "ros_original": 3.55,
+      "clasificacion_original": "Muy bueno"
+    },
+    {
+      "nombre": "Moreno",
+      "ambito": "PBA",
+      "poblacion": 574374,
+      "densidad_poblacional": 3086.0,
+      "densidad_comercial": 3048.0,
+      "cupo_disponible": 6,
+      "cupo_objetivo": 22,
+      "componentes": [
+        4,
+        3,
+        2,
+        4
+      ],
+      "ros_original": 3.275,
+      "clasificacion_original": "Muy bueno"
+    },
+    {
+      "nombre": "Morón",
+      "ambito": "PBA",
+      "poblacion": 334178,
+      "densidad_poblacional": 6010.0,
+      "densidad_comercial": 8811.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 13,
+      "componentes": [
+        3,
+        4,
+        4,
+        1
+      ],
+      "ros_original": 2.7,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "Pilar",
+      "ambito": "PBA",
+      "poblacion": 395072,
+      "densidad_poblacional": 1122.0,
+      "densidad_comercial": 1145.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 15,
+      "componentes": [
+        3,
+        2,
+        1,
+        1
+      ],
+      "ros_original": 1.525,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Quilmes",
+      "ambito": "PBA",
+      "poblacion": 633391,
+      "densidad_poblacional": 6738.0,
+      "densidad_comercial": 7902.0,
+      "cupo_disponible": 4,
+      "cupo_objetivo": 25,
+      "componentes": [
+        4,
+        4,
+        3,
+        3
+      ],
+      "ros_original": 3.35,
+      "clasificacion_original": "Muy bueno"
+    },
+    {
+      "nombre": "San Fernando",
+      "ambito": "PBA",
+      "poblacion": 171616,
+      "densidad_poblacional": 186.0,
+      "densidad_comercial": 302.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 6,
+      "componentes": [
+        2,
+        1,
+        1,
+        1
+      ],
+      "ros_original": 1.1749999999999998,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "San Isidro",
+      "ambito": "PBA",
+      "poblacion": 297282,
+      "densidad_poblacional": 6193.0,
+      "densidad_comercial": 10401.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 11,
+      "componentes": [
+        2,
+        4,
+        4,
+        1
+      ],
+      "ros_original": 2.525,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "San Miguel",
+      "ambito": "PBA",
+      "poblacion": 326215,
+      "densidad_poblacional": 3939.0,
+      "densidad_comercial": 4459.0,
+      "cupo_disponible": 2,
+      "cupo_objetivo": 13,
+      "componentes": [
+        3,
+        3,
+        3,
+        2
+      ],
+      "ros_original": 2.625,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "San Vicente",
+      "ambito": "PBA",
+      "poblacion": 98569,
+      "densidad_poblacional": 168.0,
+      "densidad_comercial": 252.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 3,
+      "componentes": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "ros_original": 1.0,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Tandil",
+      "ambito": "PBA",
+      "poblacion": 150162,
+      "densidad_poblacional": 30.0,
+      "densidad_comercial": 51.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 6,
+      "componentes": [
+        2,
+        1,
+        1,
+        1
+      ],
+      "ros_original": 1.1749999999999998,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Tigre",
+      "ambito": "PBA",
+      "poblacion": 451101,
+      "densidad_poblacional": 1244.0,
+      "densidad_comercial": 1346.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 18,
+      "componentes": [
+        3,
+        2,
+        1,
+        1
+      ],
+      "ros_original": 1.525,
+      "clasificacion_original": "Malo"
+    },
+    {
+      "nombre": "Tres de Febrero",
+      "ambito": "PBA",
+      "poblacion": 364176,
+      "densidad_poblacional": 8093.0,
+      "densidad_comercial": 11760.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 14,
+      "componentes": [
+        3,
+        4,
+        4,
+        1
+      ],
+      "ros_original": 2.7,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "Vicente Lopez",
+      "ambito": "PBA",
+      "poblacion": 283510,
+      "densidad_poblacional": 8388.0,
+      "densidad_comercial": 15092.0,
+      "cupo_disponible": 0,
+      "cupo_objetivo": 11,
+      "componentes": [
+        2,
+        4,
+        4,
+        1
+      ],
+      "ros_original": 2.525,
+      "clasificacion_original": "Bueno"
+    },
+    {
+      "nombre": "Zárate",
+      "ambito": "PBA",
+      "poblacion": 132221,
+      "densidad_poblacional": 110.0,
+      "densidad_comercial": 176.0,
+      "cupo_disponible": 3,
+      "cupo_objetivo": 5,
+      "componentes": [
+        1,
+        1,
+        1,
+        3
+      ],
+      "ros_original": 1.75,
+      "clasificacion_original": "Regular"
+    }
+  ]
+}
